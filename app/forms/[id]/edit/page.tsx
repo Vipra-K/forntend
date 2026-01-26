@@ -360,7 +360,7 @@ export default function FormEditor({ params }: { params: Promise<{ id: string }>
 
       {/* Right Inspector */}
       <AnimatePresence>
-        {activeFieldId && (
+        {activeFieldId && form.fields.find(f => f.id === activeFieldId) && (
           <InspectorPanel 
             key={activeFieldId}
             field={form.fields.find(f => f.id === activeFieldId)!} 
