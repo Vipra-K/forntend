@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { Mail, Lock, Loader2, ArrowRight, FileText, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,11 +22,15 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         await login(email, password);
+        toast.success('Welcome back!');
       } else {
         await register(email, password);
+        toast.success('Account created successfully');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Authentication failed');
+      const msg = err.response?.data?.message || 'Authentication failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }

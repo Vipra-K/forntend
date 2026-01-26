@@ -4,6 +4,7 @@ import React, { useEffect, useState, use } from 'react';
 import api from '../../../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle, Send } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Field {
   id: string;
@@ -62,9 +63,10 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
     try {
       await api.post(`/forms/${form.id}/responses`, { values });
       setStatus('success');
+      toast.success('Response submitted successfully!');
     } catch (err: any) {
       setStatus('ready');
-      alert(err.response?.data?.message || 'Submission failed');
+      toast.error(err.response?.data?.message || 'Submission failed. Please check your answers.');
     }
   };
 

@@ -27,13 +27,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    const initAuth = async () => {
+      const savedToken = localStorage.getItem('token');
+      if (savedToken) {
+        try {
+          // Verify token and fetch fresh user data
+          const res = await api.post('/auth/me');
+          setUser(res.data);
+          setToken(savedToken);
+        } catch (err) {
+          // If token is invalid or user deleted, clear everything
+          logout();
+        }
+      }
+      setIsLoading(false);
+    };
+
+    initAuth();
+
+    // 401 Interceptor: Automatically logout if session expires
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => api.interceptors.response.eject(interceptor);
   }, []);
 
   const login = async (email: string, pass: string) => {

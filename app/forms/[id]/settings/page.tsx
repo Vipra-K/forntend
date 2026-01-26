@@ -49,7 +49,6 @@ export default function SettingsPage({ params }: { params: Promise<{ id: string 
       await api.patch(`/forms/${id}`, {
         title: form.title,
         description: form.description,
-        slug: form.slug
       });
       setMessage({ type: 'success', text: 'Form settings synchronized successfully.' });
       setTimeout(() => setMessage(null), 3000);
@@ -147,8 +146,8 @@ export default function SettingsPage({ params }: { params: Promise<{ id: string 
                   </div>
                   <input 
                     value={form.slug}
-                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                    className="flex-1 bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
+                    readOnly
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm font-mono text-slate-400 cursor-not-allowed outline-none"
                   />
                 </div>
                 <p className="text-[10px] text-slate-400 mt-2 ml-1">

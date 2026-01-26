@@ -17,6 +17,7 @@ import {
   Eye
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface Form {
   id: string;
@@ -53,15 +54,23 @@ export default function Dashboard() {
     }
   };
 
-  const createForm = async () => {
-    const title = prompt('Enter form title:', 'New Dynamic Form');
-    if (!title) return;
+  /* New Form State */
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newFormTitle, setNewFormTitle] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
+  const handleCreateForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFormTitle.trim()) return;
+
+    setIsCreating(true);
     try {
-      const res = await api.post('/forms', { title });
+      const res = await api.post('/forms', { title: newFormTitle });
+      toast.success('Form created successfully!');
       router.push(`/forms/${res.data.formId}/edit`);
     } catch (err) {
-      alert('Failed to create form');
+      toast.error('Failed to create form. Please try again.');
+      setIsCreating(false);
     }
   };
 
@@ -117,7 +126,7 @@ export default function Dashboard() {
             <p className="text-sm text-slate-500 mt-1">Manage your forms and view recent activity.</p>
           </div>
           <button 
-            onClick={createForm}
+            onClick={() => setIsCreateModalOpen(true)}
             className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center space-x-2 hover:bg-blue-700 transition-all shadow-sm"
           >
             <Plus className="w-4 h-4" />
@@ -137,7 +146,7 @@ export default function Dashboard() {
             <h3 className="text-lg font-semibold text-slate-800">No forms found</h3>
             <p className="text-sm text-slate-500 mb-6">Create your first form to start collecting data.</p>
             <button 
-              onClick={createForm}
+              onClick={() => setIsCreateModalOpen(true)}
               className="text-blue-600 font-semibold text-sm hover:underline"
             >
               Get started +
@@ -198,6 +207,55 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      {/* Create Form Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-[2px]">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md bg-white border border-slate-200 p-8 rounded-xl shadow-2xl"
+          >
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+                <FileText className="w-6 h-6" />
+              </div>
+              <h2 className="text-lg font-bold text-slate-900">Create New Form</h2>
+              <p className="text-sm text-slate-500">Give your form a clear, descriptive title to get started.</p>
+            </div>
+
+            <form onSubmit={handleCreateForm} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 ml-1 uppercase tracking-wide">Form Title</label>
+                <input 
+                  autoFocus
+                  value={newFormTitle}
+                  onChange={(e) => setNewFormTitle(e.target.value)}
+                  placeholder="e.g. Customer Satisfaction Survey"
+                  className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-2">
+                <button 
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-600 font-semibold rounded-lg hover:bg-slate-200 transition-all text-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={!newFormTitle.trim() || isCreating}
+                  className="flex-1 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCreating ? 'Creating...' : 'Create Form'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

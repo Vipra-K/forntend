@@ -31,6 +31,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion, Reorder, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface FieldType {
   id: string;
@@ -88,16 +89,42 @@ export default function FormEditor({ params }: { params: Promise<{ id: string }>
       const latestDraft = versions.find((v: any) => !v.publishedAt && !v.closedAt);
       const activeVer = versions.find((v: any) => v.isActive);
 
-      const targetVersion = latestDraft || activeVer;
-
-      if (targetVersion) {
-        setActiveVersionId(targetVersion.id);
+      // 🚀 Auto-Branching: If no draft exists, create one immediately.
+      // This ensures the user is ALWAYS editing a mutable version.
+      if (latestDraft) {
+        setActiveVersionId(latestDraft.id);
         
-        // If we are looking at a version that's NOT the 'active' one returned by /forms/:id,
-        // we might need to fetch THAT specific version's fields if /forms/:id only returns active.
-        // Actually our backend /forms/:id returns the ACTIVE version's fields.
-        // If we want to edit a draft that isn't active yet, we need a way to get its fields.
-        // I'll assume for now that the user is editing the latest version.
+        // ⚡️ CRITICAL FIX: Fetch fields specifically for THIS draft version.
+        // Otherwise we risk showing V1 fields while trying to edit V2, causing 400 Bad Request.
+        try {
+          const draftDetails = await api.get(`/forms/${id}/versions/${latestDraft.id}`);
+          setForm({ 
+            ...formRes.data, 
+            version: latestDraft.version,
+            fields: draftDetails.data.fields 
+          }); 
+        } catch (err) {
+          console.error("Failed to load draft details, falling back to form defaults", err);
+          setForm(formRes.data);
+        }
+
+      } else if (activeVer) {
+        // No draft, only active (published) version. Create Draft V(N+1) NOW.
+        try {
+          const newVersionRes = await api.post(`/forms/${id}/versions`);
+          setActiveVersionId(newVersionRes.data.versionId);
+          setForm({
+             ...formRes.data,
+             version: newVersionRes.data.version,
+             fields: newVersionRes.data.fields
+          });
+          toast.success(`Started new draft: Version ${newVersionRes.data.version}`);
+        } catch (err) {
+          console.error("Failed to auto-create draft", err);
+          setActiveVersionId(activeVer.id);
+          setForm(formRes.data);
+        }
+      } else {
         setForm(formRes.data);
       }
     } catch (err) {
@@ -108,22 +135,65 @@ export default function FormEditor({ params }: { params: Promise<{ id: string }>
     }
   };
 
-  const ensureDraft = async () => {
-    if (!form) return null;
+  const ensureDraft = async (fieldId?: string) => {
+    if (!form) return { vid: null, fid: fieldId };
     
-    // Check if current activeVersionId is published
     const versionsRes = await api.get(`/forms/${id}/versions`);
     const current = versionsRes.data.find((v: any) => v.id === activeVersionId);
 
     if (current && (current.publishedAt || current.closedAt)) {
-      // Create new draft
       const newVersionRes = await api.post(`/forms/${id}/versions`);
-      const newId = newVersionRes.data.versionId;
-      setActiveVersionId(newId);
-      await fetchData();
-      return newId;
+      const { versionId: newVid, fields: newFields } = newVersionRes.data;
+      
+      let newFid = null;
+      
+      if (fieldId) {
+        const oldField = form.fields.find(f => f.id === fieldId);
+        
+        if (oldField) {
+          // 1. Try exact match by label + order + type (Best)
+          let match = newFields.find((f: any) => 
+            f.label === oldField.label && 
+            f.order === oldField.order &&
+            f.type.key === oldField.type.key
+          );
+
+          // 2. Fallback: Try match by Order only (Good for renames)
+          if (!match) {
+            match = newFields.find((f: any) => f.order === oldField.order);
+          }
+
+          // 3. Fallback: Try match by Index (Last resort)
+          if (!match) {
+            const oldIndex = form.fields.findIndex(f => f.id === fieldId);
+            if (oldIndex >= 0 && newFields[oldIndex]) {
+              match = newFields[oldIndex];
+            }
+          }
+
+          if (match) newFid = match.id;
+        }
+      }
+
+      setForm({
+        ...form,
+        fields: newFields,
+        version: newVersionRes.data.version
+      });
+      setActiveVersionId(newVid);
+      
+      // CRITICAL: If mapping failed, do NOT return old ID. Return null or newFid.
+      // If we return fieldId (old), the API call will use it and fail with 400.
+      if (newFid) {
+        setActiveFieldId(newFid);
+        return { vid: newVid, fid: newFid };
+      } else {
+        // If we couldn't map, clear selection -> prevents 400 error
+        setActiveFieldId(null);
+        return { vid: newVid, fid: null };
+      }
     }
-    return activeVersionId;
+    return { vid: activeVersionId, fid: fieldId };
   };
 
   const addField = async (typeId: string) => {
@@ -132,7 +202,7 @@ export default function FormEditor({ params }: { params: Promise<{ id: string }>
     if (!type) return;
 
     try {
-      const vid = await ensureDraft();
+      const { vid } = await ensureDraft();
       if (!vid) return;
 
       const payload: any = {
@@ -149,19 +219,21 @@ export default function FormEditor({ params }: { params: Promise<{ id: string }>
       const res = await api.post(`/form-versions/${vid}/fields`, payload);
       await fetchData();
       setActiveFieldId(res.data.id);
+      toast.success('Field added');
     } catch (err) {
-      alert('Failed to add field');
+      toast.error('Failed to add field');
     }
   };
 
   const deleteField = async (fieldId: string) => {
     try {
-      const vid = await ensureDraft();
-      if (!vid) return;
-      await api.delete(`/form-versions/${vid}/fields/${fieldId}`);
+      const { vid, fid } = await ensureDraft(fieldId);
+      if (!vid || !fid) return;
+      await api.delete(`/form-versions/${vid}/fields/${fid}`);
       await fetchData();
+      toast.success('Field deleted');
     } catch (err) {
-      alert('Failed to delete field');
+      toast.error('Failed to delete field');
     }
   };
 
@@ -175,10 +247,10 @@ export default function FormEditor({ params }: { params: Promise<{ id: string }>
       // 2. Activate it
       await api.put(`/forms/${id}/versions/${activeVersionId}/activate`);
 
-      alert('Form published & live!');
+      toast.success('Form published & live!');
       await fetchData();
     } catch (err) {
-      alert('Publishing failed');
+      toast.error('Publishing failed');
     }
   };
 
@@ -289,110 +361,137 @@ export default function FormEditor({ params }: { params: Promise<{ id: string }>
       {/* Right Inspector */}
       <AnimatePresence>
         {activeFieldId && (
-          <motion.aside
-            initial={{ x: 320 }}
-            animate={{ x: 0 }}
-            exit={{ x: 320 }}
-            className="w-80 border-l border-slate-200 bg-white shadow-xl overflow-hidden"
-          >
-            <div key={activeFieldId} className="h-full p-8 overflow-y-auto">
-              <div className="flex items-center justify-between mb-10">
-                <h3 className="font-bold flex items-center space-x-2 text-slate-900 uppercase tracking-widest text-[10px]">
-                  <Settings2 className="w-4 h-4 text-blue-600" />
-                  <span>Field Properties</span>
-                </h3>
-                <button onClick={() => setActiveFieldId(null)} className="text-slate-400 hover:text-slate-900 transition-colors">
-                  <Plus className="w-5 h-5 rotate-45" />
-                </button>
-              </div>
+          <InspectorPanel 
+            key={activeFieldId}
+            field={form.fields.find(f => f.id === activeFieldId)!} 
+            onClose={() => setActiveFieldId(null)}
+            onSave={async (updates) => {
+              try {
+                // Ensure Draft & Get Correct ID
+                const { vid, fid } = await ensureDraft(activeFieldId);
+                
+                if (!vid || !fid) {
+                  toast.error('Could not find draft version.');
+                  return;
+                }
 
-              <div className="space-y-6">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Label</label>
-                  <input 
-                    className="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all"
-                    placeholder="e.g. Full Name"
-                    defaultValue={form.fields.find(f => f.id === activeFieldId)?.label}
-                    onBlur={async (e) => {
-                      try {
-                        await api.patch(`/form-versions/${activeVersionId}/fields/${activeFieldId}`, { label: e.target.value });
-                        await fetchData();
-                      } catch (err) {}
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Description</label>
-                  <textarea 
-                    className="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 h-24 transition-all"
-                    placeholder="Describe how to answer this..."
-                    defaultValue={form.fields.find(f => f.id === activeFieldId)?.description}
-                    onBlur={async (e) => {
-                      try {
-                        await api.patch(`/form-versions/${activeVersionId}/fields/${activeFieldId}`, { description: e.target.value });
-                        await fetchData();
-                      } catch (err) {}
-                    }}
-                  />
-                </div>
-
-                {(form.fields.find(f => f.id === activeFieldId)?.type.key === 'select' || 
-                  form.fields.find(f => f.id === activeFieldId)?.type.key === 'multiselect') && (
-                   <div className="space-y-4 pt-4 border-t border-slate-100">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Options (One per line)</label>
-                      <textarea 
-                        className="w-full bg-white border border-slate-200 rounded-lg p-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 h-32 transition-all"
-                        placeholder="Option 1&#10;Option 2..."
-                        defaultValue={form.fields.find(f => f.id === activeFieldId)?.options.map(o => o.label).join('\n')}
-                        onBlur={async (e) => {
-                          const options = e.target.value.split('\n').filter(l => l.trim().length > 0);
-                          try {
-                            await api.patch(`/form-versions/${activeVersionId}/fields/${activeFieldId}`, { options });
-                            await fetchData();
-                          } catch (err) {}
-                        }}
-                      />
-                   </div>
-                )}
-
-                <div className="flex items-center justify-between pt-6 border-t border-slate-100">
-                  <span className="text-xs font-semibold text-slate-700">Required</span>
-                  <button 
-                    onClick={async () => {
-                      const field = form.fields.find(f => f.id === activeFieldId);
-                      if (!field || !activeVersionId) return;
-                      
-                      try {
-                        setForm({
-                          ...form,
-                          fields: form.fields.map(f => 
-                            f.id === activeFieldId ? { ...f, required: !f.required } : f
-                          )
-                        });
-                        
-                        await api.patch(`/form-versions/${activeVersionId}/fields/${activeFieldId}`, { 
-                          required: !field.required 
-                        });
-                        await fetchData();
-                      } catch (err) {
-                        await fetchData();
-                      }
-                    }}
-                    className={`w-10 h-5 rounded-full transition-all relative ${
-                      form.fields.find(f => f.id === activeFieldId)?.required ? 'bg-blue-600' : 'bg-slate-300'
-                    }`}
-                  >
-                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${
-                      form.fields.find(f => f.id === activeFieldId)?.required ? 'left-[22px]' : 'left-0.5'
-                    }`} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.aside>
+                // Patch
+                await api.patch(`/form-versions/${vid}/fields/${fid}`, updates);
+                toast.success('Field updated');
+                
+                // Refresh
+                await fetchData();
+              } catch (err) {
+                toast.error('Failed to save field');
+              }
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function InspectorPanel({ field, onClose, onSave }: { 
+  field: Field; 
+  onClose: () => void; 
+  onSave: (data: Partial<Field> & { options?: string[] }) => Promise<void>;
+}) {
+  const [label, setLabel] = useState(field.label);
+  const [description, setDescription] = useState(field.description || '');
+  const [required, setRequired] = useState(field.required);
+  const [options, setOptions] = useState(field.options.map(o => o.label).join('\n'));
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    const updates: any = { label, description, required };
+    
+    if (field.type.key === 'select' || field.type.key === 'multiselect') {
+      updates.options = options.split('\n').filter(l => l.trim().length > 0);
+    }
+
+    await onSave(updates);
+    setIsSaving(false);
+  };
+
+  return (
+    <motion.aside
+      initial={{ x: 320 }}
+      animate={{ x: 0 }}
+      exit={{ x: 320 }}
+      className="w-80 border-l border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col h-full"
+    >
+      <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <h3 className="font-bold flex items-center space-x-2 text-slate-800 uppercase tracking-widest text-[10px]">
+          <Settings2 className="w-3.5 h-3.5 text-blue-600" />
+          <span>Properties</span>
+        </h3>
+        <button onClick={onClose} className="text-slate-400 hover:text-slate-700 transition-colors p-1">
+          <Plus className="w-5 h-5 rotate-45" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Label</label>
+          <input 
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all font-medium text-slate-700"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Description</label>
+          <textarea 
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 h-24 transition-all resize-none text-slate-600"
+          />
+        </div>
+
+        {(field.type.key === 'select' || field.type.key === 'multiselect') && (
+           <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Options</label>
+              <textarea 
+                value={options}
+                onChange={(e) => setOptions(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-lg p-3 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 h-32 transition-all resize-none text-slate-600"
+                placeholder="One option per line..."
+              />
+           </div>
+        )}
+
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-xs font-bold text-slate-700">Required</span>
+          <button 
+            onClick={() => setRequired(!required)}
+            className={`w-10 h-5 rounded-full transition-all relative ${
+              required ? 'bg-blue-600' : 'bg-slate-300'
+            }`}
+          >
+            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${
+              required ? 'left-[22px]' : 'left-0.5'
+            }`} />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-6 border-t border-slate-100 bg-slate-50/50">
+        <button 
+          onClick={handleSave}
+          disabled={isSaving}
+          className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-all text-xs flex items-center justify-center space-x-2 shadow-sm shadow-blue-200 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {isSaving ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Save className="w-3.5 h-3.5" />
+          )}
+          <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
+        </button>
+      </div>
+    </motion.aside>
   );
 }

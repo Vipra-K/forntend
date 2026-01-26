@@ -36,6 +36,7 @@ export default function FormManagementLayout({
   const navItems = [
     { label: 'Editor', icon: Layers, path: `/forms/${id}/edit` },
     { label: 'Responses', icon: MessageSquare, path: `/forms/${id}/responses` },
+    { label: 'Insights', icon: BarChart3, path: `/forms/${id}/insights` },
     { label: 'Settings', icon: Settings2, path: `/forms/${id}/settings` },
   ];
 
