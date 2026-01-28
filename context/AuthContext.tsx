@@ -15,6 +15,10 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string) => Promise<void>;
   logout: () => void;
+  forgotPassword: (email: string) => Promise<{ message: string; debugToken?: string }>;
+  resetPassword: (token: string, newPass: string) => Promise<void>;
+  changePassword: (oldPass: string, newPass: string) => Promise<void>;
+  updateProfile: (email?: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -87,8 +91,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
+  const forgotPassword = async (email: string) => {
+    const res = await api.post('/auth/forgot-password', { email });
+    return res.data;
+  };
+
+  const resetPassword = async (token: string, newPass: string) => {
+    await api.post('/auth/reset-password', { token, newPassword: newPass });
+    router.push('/login');
+  };
+
+  const changePassword = async (oldPass: string, newPass: string) => {
+    await api.patch('/auth/change-password', { oldPassword: oldPass, newPassword: newPass });
+  };
+
+  const updateProfile = async (email?: string) => {
+    const res = await api.patch('/auth/me', { email });
+    const updatedUser = res.data;
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login, 
+      register, 
+      logout, 
+      forgotPassword, 
+      resetPassword, 
+      changePassword, 
+      updateProfile, 
+      isLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

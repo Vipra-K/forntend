@@ -92,7 +92,7 @@ export default function FormManagementLayout({
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex flex-col">
+    <div className="h-screen bg-white text-slate-900 flex flex-col">
       {/* Professional Minimal Header */}
       <header className="h-14 border-b border-slate-200 flex items-center justify-between px-6 bg-white sticky top-0 z-50">
         <div className="flex items-center space-x-6">
@@ -105,7 +105,7 @@ export default function FormManagementLayout({
           
           <div className="flex items-center space-x-2">
             <h1 className="font-semibold text-sm">{form.title}</h1>
-            <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase font-medium">v{form.version}</span>
+            <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase font-medium">version-{form.version}</span>
           </div>
         </div>
 
