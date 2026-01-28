@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { Mail, Loader2, ArrowRight, FileText, AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Mail, Loader2, Lock, ArrowRight, FileText, AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function ForgotPasswordPage() {
