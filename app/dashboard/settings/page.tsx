@@ -7,10 +7,11 @@ import {
   Lock, 
   Shield, 
   Bell, 
-  Globe, 
+  CreditCard, 
   Save,
   Loader2,
-  Key
+  Key,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../../lib/api';
@@ -87,49 +88,56 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
+      <div className="h-full flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       </div>
     );
   }
 
+  const tabs = [
+    { id: 'profile' as const, label: 'Profile', icon: User },
+    { id: 'security' as const, label: 'Security', icon: Lock },
+    { id: 'notifications' as const, label: 'Notifications', icon: Bell },
+    { id: 'billing' as const, label: 'Billing', icon: CreditCard },
+  ];
+
   return (
     <div className="max-w-6xl px-8 lg:px-12 py-12">
       <header className="mb-12">
-        <div className="flex items-center space-x-2 text-blue-600 mb-2">
-          <Shield className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">Account</span>
+        <div className="flex items-center space-x-2 text-blue-600 mb-3">
+          <Shield className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-black uppercase tracking-[0.25em]">Account</span>
         </div>
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Settings</h1>
-        <p className="text-slate-500 mt-2 font-medium">Manage your personal profile and account preferences.</p>
+        <h1 className="text-5xl font-black text-slate-900 tracking-tight mb-2">Settings</h1>
+        <p className="text-slate-500 font-medium text-base">Manage your account preferences and security settings.</p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Navigation Sidebar */}
-        <aside className="lg:col-span-1 space-y-2">
-          {( [
-            { id: 'profile', label: 'Profile', icon: User },
-            { id: 'security', label: 'Security', icon: Lock },
-            { id: 'notifications', label: 'Notifications', icon: Bell },
-            { id: 'billing', label: 'Billing', icon: Globe },
-          ] as const).map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center space-x-3 px-6 py-4 rounded-2xl text-sm font-bold transition-all ${
-                activeTab === item.id 
-                  ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 ripple-effect' 
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <item.icon className="w-4.5 h-4.5" />
-              <span>{item.label}</span>
-            </button>
-          ))}
+        <aside className="lg:col-span-1">
+          <nav className="space-y-1">
+            {tabs.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                  activeTab === item.id 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <item.icon className="w-4.5 h-4.5" />
+                <span>{item.label}</span>
+                {activeTab === item.id && (
+                  <Check className="w-4 h-4 ml-auto" />
+                )}
+              </button>
+            ))}
+          </nav>
         </aside>
 
         {/* Content Area */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <AnimatePresence mode="wait">
             {activeTab === 'profile' && (
               <motion.div 
@@ -137,16 +145,16 @@ export default function SettingsPage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm"
+                className="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm"
               >
-                <form onSubmit={handleProfileUpdate} className="space-y-8">
-                  <div className="pb-8 border-b border-slate-100 mb-8">
-                    <h3 className="text-lg font-black text-slate-900">Profile Information</h3>
-                    <p className="text-sm text-slate-500 font-medium">Update your account email address.</p>
+                <form onSubmit={handleProfileUpdate} className="space-y-6">
+                  <div className="pb-6 border-b border-slate-100">
+                    <h3 className="text-xl font-black text-slate-900 mb-1">Profile Information</h3>
+                    <p className="text-sm text-slate-500">Update your account email address and personal details.</p>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Email Address</label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                       <input 
@@ -154,19 +162,19 @@ export default function SettingsPage() {
                         required
                         value={profile.email}
                         onChange={(e) => setProfile({ email: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
                       />
                     </div>
                   </div>
 
-                  <div className="pt-8 flex justify-end">
+                  <div className="pt-6 flex justify-end">
                     <button 
                       type="submit"
                       disabled={isSaving}
-                      className="bg-slate-900 text-white px-10 py-4 rounded-xl text-xs font-black uppercase tracking-[0.2em] flex items-center space-x-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-70"
+                      className="bg-blue-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center space-x-2"
                     >
                       {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      <span>{isSaving ? 'Updating...' : 'Save Profile'}</span>
+                      <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
                     </button>
                   </div>
                 </form>
@@ -179,16 +187,16 @@ export default function SettingsPage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm"
+                className="bg-white border border-slate-100 rounded-2xl p-8 shadow-sm"
               >
                 <form onSubmit={handlePasswordChange} className="space-y-6">
-                  <div className="pb-8 border-b border-slate-100 mb-8">
-                    <h3 className="text-lg font-black text-slate-900">Security</h3>
-                    <p className="text-sm text-slate-500 font-medium">Protect your account with a secure password.</p>
+                  <div className="pb-6 border-b border-slate-100">
+                    <h3 className="text-xl font-black text-slate-900 mb-1">Security Settings</h3>
+                    <p className="text-sm text-slate-500">Keep your account secure with a strong password.</p>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Password</label>
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Current Password</label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                       <input 
@@ -196,14 +204,14 @@ export default function SettingsPage() {
                         required
                         value={passwordData.oldPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all"
-                        placeholder="••••••••"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+                        placeholder="Enter current password"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Password</label>
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">New Password</label>
                     <div className="relative">
                       <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                       <input 
@@ -212,14 +220,14 @@ export default function SettingsPage() {
                         minLength={6}
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all"
-                        placeholder="Min. 6 characters"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+                        placeholder="Minimum 6 characters"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirm New Password</label>
+                    <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Confirm New Password</label>
                     <div className="relative">
                       <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
                       <input 
@@ -227,20 +235,20 @@ export default function SettingsPage() {
                         required
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all"
-                        placeholder="Re-type new password"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+                        placeholder="Re-enter new password"
                       />
                     </div>
                   </div>
 
-                  <div className="pt-8 flex justify-end">
+                  <div className="pt-6 flex justify-end">
                     <button 
                       type="submit"
                       disabled={isSaving}
-                      className="bg-slate-900 text-white px-10 py-4 rounded-xl text-xs font-black uppercase tracking-[0.2em] flex items-center space-x-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 disabled:opacity-70"
+                      className="bg-blue-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center space-x-2"
                     >
                       {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      <span>{isSaving ? 'Saving...' : 'Update Password'}</span>
+                      <span>{isSaving ? 'Updating...' : 'Update Password'}</span>
                     </button>
                   </div>
                 </form>
@@ -250,28 +258,42 @@ export default function SettingsPage() {
             {activeTab === 'notifications' && (
               <motion.div 
                 key="notifications"
-                className="bg-white border border-slate-200 rounded-[2.5rem] p-16 shadow-sm text-center"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white border border-slate-100 rounded-2xl p-16 shadow-sm text-center"
               >
-                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Bell className="w-6 h-6 text-slate-300" />
+                <div className="w-20 h-20 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <Bell className="w-8 h-8 text-slate-400" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">Notification Settings</h3>
-                <p className="text-slate-500 mt-2 font-medium">Configure how and when you want to receive alerts.</p>
-                <button className="mt-8 px-8 py-3 bg-slate-100 text-slate-400 cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-widest">Coming Soon</button>
+                <h3 className="text-2xl font-black text-slate-900 mb-2">Notification Preferences</h3>
+                <p className="text-slate-500 font-medium max-w-md mx-auto mb-8">
+                  Configure how and when you want to receive alerts about form submissions and account activity.
+                </p>
+                <div className="inline-flex px-6 py-3 bg-slate-100 text-slate-500 rounded-xl text-sm font-bold">
+                  Coming Soon
+                </div>
               </motion.div>
             )}
 
             {activeTab === 'billing' && (
               <motion.div 
                 key="billing"
-                className="bg-white border border-slate-200 rounded-[2.5rem] p-16 shadow-sm text-center"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="bg-white border border-slate-100 rounded-2xl p-16 shadow-sm text-center"
               >
-                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Globe className="w-6 h-6 text-slate-300" />
+                <div className="w-20 h-20 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <CreditCard className="w-8 h-8 text-slate-400" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">Billing & Plans</h3>
-                <p className="text-slate-500 mt-2 font-medium">Manage your subscription and view payment history.</p>
-                <button className="mt-8 px-8 py-3 bg-slate-100 text-slate-400 cursor-not-allowed rounded-xl text-[10px] font-black uppercase tracking-widest">Coming Soon</button>
+                <h3 className="text-2xl font-black text-slate-900 mb-2">Billing & Subscription</h3>
+                <p className="text-slate-500 font-medium max-w-md mx-auto mb-8">
+                  Manage your subscription plan, payment methods, and view billing history.
+                </p>
+                <div className="inline-flex px-6 py-3 bg-slate-100 text-slate-500 rounded-xl text-sm font-bold">
+                  Coming Soon
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

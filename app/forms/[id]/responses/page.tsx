@@ -3,171 +3,251 @@
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '../../../../lib/api';
-import { 
-  ChevronLeft, 
-  Download, 
-  Search, 
-  Trash2, 
-  Calendar, 
-  Users, 
-  BarChart3,
-  ExternalLink,
-  Loader2,
-  Filter
-} from 'lucide-react';
+import { ChevronLeft, Loader2, FileText, Users, TrendingUp, Clock, CheckCircle2, XCircle, Calendar } from 'lucide-react';
+import { toast } from 'sonner';
+import { ResponsesTable } from '../insights/components/ResponsesTable';
 import { motion } from 'framer-motion';
 
-interface Response {
-  id: string;
-  submittedAt: string;
-  answers: {
-    fieldId: string;
-    label: string;
-    value: any;
-  }[];
+interface Answer {
+  fieldId: string;
+  label: string;
+  value: any;
 }
 
-interface FormMetadata {
+interface ResponseRecord {
   id: string;
+  submittedAt: string;
+  answers: Answer[];
+}
+
+interface FormSettings {
+  maxSubmissions: number | null;
+  allowMultipleSubmissions: boolean;
+  openAt: string | null;
+  closeAt: string | null;
+  successMessage: string | null;
+  redirectUrl: string | null;
+}
+
+interface ResponseData {
+  formId: string;
   title: string;
   fields: { id: string; label: string; order: number }[];
+  responses: ResponseRecord[];
+  settings: FormSettings | null;
+  responseCount: number;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export default function ResponsesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [data, setData] = useState<{ formId: string; title: string, fields: any[], responses: Response[] } | null>(null);
+  const [responseData, setResponseData] = useState<ResponseData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     fetchResponses();
-  }, [id]);
+  }, [id, currentPage, sortOrder, startDate, endDate]);
 
   const fetchResponses = async () => {
     try {
-      const res = await api.get(`/forms/${id}/responses`);
-      setData(res.data);
+      const res = await api.get(`/forms/${id}/responses`, {
+        params: { 
+          page: currentPage, 
+          limit: 10,
+          sortOrder,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
+        }
+      });
+      setResponseData(res.data);
     } catch (err) {
-      console.error('Failed to load responses', err);
+      toast.error('Failed to load responses');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const formatValue = (val: any) => {
-    if (val === null || val === undefined) return '-';
-    if (Array.isArray(val)) return val.join(', ');
-    if (typeof val === 'boolean') return val ? 'True' : 'False';
-    
-    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
-      const date = new Date(val);
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString(undefined, {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-      }
-    }
-    
-    return String(val);
-  };
-
-  const exportCsv = async () => {
+  const exportCSV = async () => {
     try {
       const res = await api.get(`/forms/${id}/responses/export/csv`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${data?.title}_responses.csv`);
+      link.setAttribute('download', `responses-${id}.csv`);
       document.body.appendChild(link);
       link.click();
-      link.remove();
+      toast.success('CSV Exported');
     } catch (err) {
-      alert('Export failed');
+      toast.error('Export failed');
     }
   };
 
-  if (isLoading || !data) {
+  const exportJSON = async () => {
+    try {
+      const res = await api.get(`/forms/${id}/responses/export/json`);
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `responses-${id}.json`);
+      document.body.appendChild(link);
+      link.click();
+      toast.success('JSON Exported');
+    } catch (err) {
+      toast.error('Export failed');
+    }
+  };
+
+  const getFormStatus = () => {
+    if (!responseData?.settings) return { status: 'Active', color: 'green', icon: CheckCircle2 };
+    
+    const now = new Date();
+    const openAt = responseData.settings.openAt ? new Date(responseData.settings.openAt) : null;
+    const closeAt = responseData.settings.closeAt ? new Date(responseData.settings.closeAt) : null;
+    
+    if (openAt && openAt > now) {
+      return { status: 'Scheduled', color: 'orange', icon: Clock };
+    }
+    
+    if (closeAt && closeAt < now) {
+      return { status: 'Closed', color: 'red', icon: XCircle };
+    }
+    
+    if (responseData.settings.maxSubmissions && responseData.responseCount >= responseData.settings.maxSubmissions) {
+      return { status: 'Limit Reached', color: 'amber', icon: Calendar };
+    }
+    
+    return { status: 'Active', color: 'green', icon: CheckCircle2 };
+  };
+
+  if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/20 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       </div>
     );
   }
 
+  const formStatus = getFormStatus();
+
   return (
-    <div className="h-full overflow-y-auto bg-white">
-      <main className="p-8 lg:p-12">
-        <div className="max-w-7xl mx-auto">
-          {/* Section Header */}
-          <div className="flex items-center justify-between mb-10">
+    <div className="h-full overflow-y-auto scrollbar-hide bg-slate-50">
+      <div className="max-w-7xl mx-auto p-6 md:p-12">
+        <header className="mb-10">
+          <div className="flex items-center space-x-2 text-blue-600 mb-3">
+            <FileText className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-wide">Form Responses</span>
+          </div>
+          <div className="flex items-start justify-between mb-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Form Submissions</h2>
-              <p className="text-sm text-slate-500 mt-1 font-medium">View and manage all received data for this form.</p>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">{responseData?.title}</h1>
+              <p className="text-slate-500 font-medium">View and export all form submissions.</p>
             </div>
-            <button 
-              onClick={exportCsv}
-              className="flex items-center space-x-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-slate-200 transition-all border border-slate-200"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </button>
+            <div className={`flex items-center space-x-2 px-4 py-2 rounded-xl border ${
+              formStatus.color === 'green' ? 'bg-green-50 border-green-200 text-green-700' :
+              formStatus.color === 'red' ? 'bg-red-50 border-red-200 text-red-700' :
+              formStatus.color === 'orange' ? 'bg-orange-50 border-orange-200 text-orange-700' :
+              'bg-amber-50 border-amber-200 text-amber-700'
+            }`}>
+              <formStatus.icon className="w-4 h-4" />
+              <span className="text-sm font-bold">{formStatus.status}</span>
+            </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Submission ID</th>
-                    <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date Received</th>
-                    {data.fields.map(f => (
-                      <th key={f.id} className="px-6 py-4 text-[10px] font-bold text-slate-700 uppercase tracking-widest min-w-[200px]">{f.label}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {data.responses.length === 0 ? (
-                    <tr>
-                      <td colSpan={data.fields.length + 2} className="px-6 py-32 text-center text-slate-400">
-                        <div className="flex flex-col items-center">
-                          <Search className="w-10 h-10 mb-4 opacity-20" />
-                          <p className="font-semibold text-sm">No submissions received yet.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    data.responses.map((resp) => (
-                      <motion.tr 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        key={resp.id} 
-                        className="hover:bg-slate-50/50 transition-colors"
-                      >
-                        <td className="px-6 py-4 text-[11px] font-mono text-slate-400 truncate max-w-[120px]">{resp.id}</td>
-                        <td className="px-6 py-4 text-xs font-medium text-slate-500 whitespace-nowrap">
-                          {new Date(resp.submittedAt).toLocaleString(undefined, {
-                            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                          })}
-                        </td>
-                        {data.fields.map(field => {
-                          const answer = resp.answers.find(a => a.fieldId === field.id);
-                          return (
-                            <td key={field.id} className="px-6 py-4 text-sm text-slate-700">
-                              {formatValue(answer?.value)}
-                            </td>
-                          );
-                        })}
-                      </motion.tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+           
+
+            {responseData?.settings?.maxSubmissions && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white border border-slate-100 p-5 rounded-xl shadow-sm"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-purple-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-slate-900">{responseData.settings.maxSubmissions}</div>
+                <div className="text-xs font-bold text-slate-600 mt-1">Maximum Limit</div>
+                <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5">
+                  <div 
+                    className="bg-purple-600 h-1.5 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, (responseData.responseCount / responseData.settings.maxSubmissions) * 100)}%` }}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {responseData?.settings?.openAt && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white border border-slate-100 p-5 rounded-xl shadow-sm"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-50 to-green-100/50 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-green-600" />
+                  </div>
+                </div>
+                <div className="text-sm font-black text-slate-900">
+                  {new Date(responseData.settings.openAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+                <div className="text-xs font-bold text-slate-600 mt-1">Opens On</div>
+              </motion.div>
+            )}
+
+            {responseData?.settings?.closeAt && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white border border-slate-100 p-5 rounded-xl shadow-sm"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-red-50 to-red-100/50 rounded-lg flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-red-600" />
+                  </div>
+                </div>
+                <div className="text-sm font-black text-slate-900">
+                  {new Date(responseData.settings.closeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+                <div className="text-xs font-bold text-slate-600 mt-1">Closes On</div>
+              </motion.div>
+            )}
           </div>
-        </div>
-      </main>
+        </header>
+
+        <ResponsesTable 
+          responseData={responseData}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          onExportCSV={exportCSV}
+          onExportJSON={exportJSON}
+        />
+      </div>
     </div>
   );
 }

@@ -11,7 +11,9 @@ import {
   Mail, 
   Link2,
   Phone,
-  Star
+  Star,
+  FileText,
+  AlignLeft
 } from 'lucide-react';
 import { ThemePanel } from './ThemePanel';
 import { SettingsPanel } from './SettingsPanel';
@@ -27,6 +29,21 @@ interface EditorSidebarProps {
   onSettingsUpdate: (updates: any) => Promise<void>;
 }
 
+const fieldIcons: Record<string, any> = {
+  'text': Type,
+  'number': Hash,
+  'select': ChevronDown,
+  'multiselect': ListChecks,
+  'date': Calendar,
+  'boolean': CheckSquare,
+  'email': Mail,
+  'url': Link2,
+  'phone': Phone,
+  'rating': Star,
+  'textarea': AlignLeft,
+  'file': FileText
+};
+
 export function EditorSidebar({
   activeSidebarTab,
   setActiveSidebarTab,
@@ -37,60 +54,54 @@ export function EditorSidebar({
   onSettingsUpdate
 }: EditorSidebarProps) {
   return (
-    <aside className="w-80 border-r border-slate-200 flex flex-col bg-white flex-shrink-0">
-      <div className="flex border-b border-slate-200">
+    <aside className="w-80 border-r border-slate-100 flex flex-col bg-white flex-shrink-0">
+      <div className="flex border-b border-slate-100">
         <button 
           onClick={() => setActiveSidebarTab('elements')}
-          className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-            activeSidebarTab === 'elements' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'
+          className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider transition-all ${
+            activeSidebarTab === 'elements' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
           }`}
         >
           Elements
         </button>
         <button 
           onClick={() => setActiveSidebarTab('theme')}
-          className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-            activeSidebarTab === 'theme' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'
+          className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider transition-all ${
+            activeSidebarTab === 'theme' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
           }`}
         >
           Theme
         </button>
         <button 
           onClick={() => setActiveSidebarTab('settings')}
-          className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-            activeSidebarTab === 'settings' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-slate-400 hover:text-slate-600'
+          className={`flex-1 py-3.5 text-xs font-bold uppercase tracking-wider transition-all ${
+            activeSidebarTab === 'settings' ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
           }`}
         >
           Settings
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide">
         {activeSidebarTab === 'elements' ? (
           <div>
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Add Elements</h3>
+            <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-4">Add Fields</h3>
             <div className="grid grid-cols-1 gap-2">
-              {fieldTypes.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => addField(type.id)}
-                  className="flex items-center space-x-3 p-3 bg-white border border-slate-100 rounded-lg hover:border-blue-500 hover:text-blue-600 transition-all text-sm group"
-                >
-                  <div className="w-8 h-8 bg-slate-50 rounded flex items-center justify-center group-hover:bg-blue-50 transition-colors">
-                    {type.key === 'text' && <Type className="w-4 h-4" />}
-                    {type.key === 'number' && <Hash className="w-4 h-4" />}
-                    {type.key === 'select' && <ChevronDown className="w-4 h-4" />}
-                    {type.key === 'multiselect' && <ListChecks className="w-4 h-4" />}
-                    {type.key === 'date' && <Calendar className="w-4 h-4" />}
-                    {type.key === 'boolean' && <CheckSquare className="w-4 h-4" />}
-                    {type.key === 'email' && <Mail className="w-4 h-4" />}
-                    {type.key === 'url' && <Link2 className="w-4 h-4" />}
-                    {type.key === 'phone' && <Phone className="w-4 h-4" />}
-                    {type.key === 'rating' && <Star className="w-4 h-4" />}
-                  </div>
-                  <span className="font-semibold text-slate-600 group-hover:text-blue-600 capitalize">{type.key}</span>
-                </button>
-              ))}
+              {fieldTypes.map((type) => {
+                const Icon = fieldIcons[type.key] || Type;
+                return (
+                  <button
+                    key={type.id}
+                    onClick={() => addField(type.id)}
+                    className="flex items-center space-x-3 p-3 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:bg-blue-50/50 transition-all text-sm group"
+                  >
+                    <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                      <Icon className="w-4 h-4 text-slate-600 group-hover:text-blue-600" />
+                    </div>
+                    <span className="font-semibold text-slate-700 group-hover:text-blue-600 capitalize">{type.key}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : activeSidebarTab === 'theme' ? (
@@ -105,15 +116,15 @@ export function EditorSidebar({
           />
         )}
 
-        <div className="pt-8 border-t border-slate-100">
-          <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Support</h3>
-          <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-            <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+        <div className="pt-6 border-t border-slate-100">
+          <h3 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-3">Tips</h3>
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl border border-blue-100">
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
               {activeSidebarTab === 'elements'
-                ? 'Click elements to add them to your form. Drag fields to reorder.'
+                ? 'Click to add fields to your form. Drag the grip icon to reorder them.'
                 : activeSidebarTab === 'theme'
-                  ? 'Customize your form style. These changes affect the public view.'
-                  : 'Configure submission limits, scheduling, and post-submission actions.'}
+                  ? 'Customize colors and fonts. Changes apply to the public form view.'
+                  : 'Configure submission limits, scheduling, and success messages.'}
             </p>
           </div>
         </div>

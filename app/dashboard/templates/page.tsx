@@ -1,35 +1,60 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { 
-  Plus, 
-  FileText, 
-  ChevronRight,
-  Mail,
-  Users,
-  Star,
-  Zap,
-  LayoutGrid,
-  Search,
-  ArrowLeft
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import api from '../../../lib/api';
+import { 
+  Search, 
+  Sparkles, 
+  FileText, 
+  Users, 
+  Calendar,
+  ClipboardList,
+  MessageSquare,
+  ShoppingCart,
+  Heart,
+  Briefcase,
+  GraduationCap,
+  Loader2
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface Template {
   id: string;
   name: string;
   description: string;
   category: string;
+  fields: any;
 }
+
+const categoryIcons: Record<string, any> = {
+  'Contact': MessageSquare,
+  'Survey': ClipboardList,
+  'Registration': Users,
+  'Event': Calendar,
+  'Order': ShoppingCart,
+  'Feedback': Heart,
+  'Application': Briefcase,
+  'Education': GraduationCap,
+};
+
+const categoryColors: Record<string, string> = {
+  'Contact': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Survey': 'bg-purple-100 text-purple-700 border-purple-200',
+  'Registration': 'bg-green-100 text-green-700 border-green-200',
+  'Event': 'bg-orange-100 text-orange-700 border-orange-200',
+  'Order': 'bg-pink-100 text-pink-700 border-pink-200',
+  'Feedback': 'bg-red-100 text-red-700 border-red-200',
+  'Application': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'Education': 'bg-teal-100 text-teal-700 border-teal-200',
+};
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const router = useRouter();
 
   useEffect(() => {
@@ -42,6 +67,7 @@ export default function TemplatesPage() {
       setTemplates(res.data);
     } catch (err) {
       console.error('Failed to fetch templates', err);
+      toast.error('Failed to load templates');
     } finally {
       setIsLoading(false);
     }
@@ -53,153 +79,141 @@ export default function TemplatesPage() {
       toast.success('Form created from template!');
       router.push(`/forms/${res.data.formId}/edit`);
     } catch (err) {
-      toast.error('Failed to create form from template');
+      console.error('Failed to create form from template', err);
+      toast.error('Failed to create form');
     }
   };
 
-  const categories = [
-    { id: 'all', label: 'All Templates' },
-    { id: 'contact', label: 'Contact Forms' },
-    { id: 'feedback', label: 'Feedback' },
-    { id: 'marketing', label: 'Marketing' },
-  ];
+  const categories = ['All', ...Array.from(new Set(templates.map(t => t.category)))];
 
-  const filteredTemplates = templates.filter(t => {
-    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         t.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'all' || t.category === activeCategory;
+  const filteredTemplates = templates.filter(template => {
+    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         template.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || template.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   return (
     <div className="max-w-6xl px-8 lg:px-12 py-12">
       {/* Header */}
-      <header className="mb-16">
-            <div className="flex items-center space-x-2 text-blue-600 mb-2 font-black uppercase tracking-[0.3em] text-[10px]">
-              <LayoutGrid className="w-3 h-3" />
-              <span>Library</span>
-            </div>
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-              <div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tight">Templates</h1>
-                <p className="text-slate-500 mt-2 font-medium">Kickstart your workflow with industry-standard form designs.</p>
-              </div>
-              
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
-                <input 
-                  type="text"
-                  placeholder="Search templates..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-12 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all"
-                />
-              </div>
-            </div>
+      <header className="mb-12">
+        <div className="flex items-center space-x-2 text-purple-600 mb-3">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-black uppercase tracking-[0.25em]">Templates</span>
+        </div>
+        <h1 className="text-5xl font-black text-slate-900 tracking-tight mb-2">Form Templates</h1>
+        <p className="text-slate-500 font-medium text-base">Start with a professionally designed template and customize it to your needs.</p>
+      </header>
 
-            {/* Category Filter */}
-            <div className="flex items-center space-x-2 mt-12 overflow-x-auto pb-4 scrollbar-hide">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                    activeCategory === cat.id
-                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
-                      : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-900 border border-transparent hover:border-slate-200'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-          </header>
+      {/* Search and Filter */}
+      <div className="mb-8 space-y-4">
+        {/* Search Bar */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search templates..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+          />
+        </div>
 
-          {/* Grid */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="h-64 bg-slate-50 animate-pulse rounded-[2.5rem] border border-slate-100" />
-              ))}
-            </div>
-          ) : filteredTemplates.length === 0 ? (
-            <div className="py-32 flex flex-col items-center justify-center bg-slate-50/50 rounded-[3rem] border border-dashed border-slate-200 text-center">
-              <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 mb-6">
-                <Search className="w-6 h-6 text-slate-300" />
-              </div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight">No templates found</h3>
-              <p className="text-slate-500 mt-2 font-medium max-w-xs">We couldn't find any templates matching your current filters.</p>
-              <button 
-                onClick={() => { setActiveCategory('all'); setSearchQuery(''); }}
-                className="mt-8 text-blue-600 font-black text-[10px] uppercase tracking-widest hover:underline"
-              >
-                Clear all filters
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {/* Blank Form Card */}
-              <motion.button
-                whileHover={{ y: -8 }}
-                onClick={() => document.getElementById('create-form-btn')?.click()} // This might require a shared state or layout modal
-                className="flex flex-col items-center justify-center p-8 bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] hover:border-blue-600 hover:bg-blue-50 transition-all group min-h-[300px]"
-              >
-                <div className="w-14 h-14 bg-slate-50 rounded-[1.2rem] flex items-center justify-center mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm border border-slate-100">
-                  <Plus className="w-6 h-6" />
-                </div>
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2">Blank Form</h3>
-                <p className="text-[11px] text-slate-500 font-medium text-center px-4 leading-relaxed">Starting from scratch? Build your unique data model from the ground up.</p>
-              </motion.button>
+        {/* Category Pills */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                selectedCategory === category
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                  : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300 hover:shadow-md'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              {filteredTemplates.map((template) => (
-                <TemplateCard 
-                  key={template.id} 
-                  template={template} 
-                  onUse={() => createFromTemplate(template.id)} 
-                />
-              ))}
-            </div>
-          )}
+      {/* Templates Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="h-64 bg-slate-50 animate-pulse rounded-2xl" />
+          ))}
+        </div>
+      ) : filteredTemplates.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 bg-gradient-to-br from-slate-50 to-purple-50/30 rounded-3xl border border-slate-100">
+          <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200/50 mb-6">
+            <Search className="w-9 h-9 text-slate-300" />
+          </div>
+          <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">No templates found</h3>
+          <p className="text-slate-500 font-medium text-center max-w-sm">
+            Try adjusting your search or filter to find what you're looking for.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTemplates.map((template, index) => (
+            <TemplateCard 
+              key={template.id} 
+              template={template} 
+              onUse={() => createFromTemplate(template.id)}
+              index={index}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function TemplateCard({ template, onUse }: { template: Template; onUse: () => void }) {
-  const getIcon = (category: string) => {
-    switch (category) {
-      case 'contact': return <Mail className="w-6 h-6" />;
-      case 'marketing': return <Zap className="w-6 h-6" />;
-      case 'feedback': return <Users className="w-6 h-6" />;
-      default: return <FileText className="w-6 h-6" />;
-    }
-  };
+function TemplateCard({ template, onUse, index }: { template: Template, onUse: () => void, index: number }) {
+  const Icon = categoryIcons[template.category] || FileText;
+  const colorClass = categoryColors[template.category] || 'bg-slate-100 text-slate-700 border-slate-200';
+  const fieldCount = Array.isArray(template.fields) ? template.fields.length : 0;
 
   return (
     <motion.div
-      whileHover={{ y: -8 }}
-      className="bg-white border border-slate-200 p-8 rounded-[2.5rem] flex flex-col hover:border-slate-900 hover:shadow-2xl hover:shadow-slate-200 transition-all group overflow-hidden h-[300px]"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="bg-white border border-slate-100 rounded-2xl p-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 group cursor-pointer flex flex-col"
+      onClick={onUse}
     >
-      <div className="w-14 h-14 bg-slate-50 rounded-[1.2rem] flex items-center justify-center mb-8 group-hover:bg-slate-900 group-hover:text-white transition-all duration-300 shadow-sm border border-slate-100">
-        {getIcon(template.category)}
+      {/* Template Icon & Category */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="p-3 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-xl group-hover:from-blue-50 group-hover:to-blue-100/50 transition-all duration-300">
+          <Icon className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors duration-300" />
+        </div>
+        <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${colorClass}`}>
+          {template.category}
+        </span>
       </div>
 
-      <div className="flex-1 mb-6">
-        <h3 className="text-xl font-black text-slate-900 group-hover:text-blue-600 transition-colors leading-tight mb-2 truncate">
+      {/* Template Info */}
+      <div className="flex-1 mb-5">
+        <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
           {template.name}
         </h3>
-        <p className="text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-3">
-          {template.description}
+        <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">
+          {template.description || 'A professionally designed form template ready to use.'}
         </p>
       </div>
 
-      <div className="flex items-center justify-between pt-6 border-t border-slate-100 mt-auto">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{template.category}</span>
+      {/* Stats */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
+          <FileText className="w-3.5 h-3.5" />
+          <span>{fieldCount} fields</span>
+        </div>
         <button 
-          onClick={onUse}
-          className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center group-hover:translate-x-1 transition-transform"
+          onClick={(e) => { e.stopPropagation(); onUse(); }}
+          className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-all opacity-0 group-hover:opacity-100"
         >
-          <span>Use Template</span>
-          <ChevronRight className="w-3.5 h-3.5 ml-1" />
+          Use Template
         </button>
       </div>
     </motion.div>

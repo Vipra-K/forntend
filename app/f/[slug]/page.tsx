@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState, use } from 'react';
 import api from '../../../lib/api';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle2, AlertCircle, Send, Star, ChevronDown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Loader2, CheckCircle2, AlertCircle, Send, Star, Clock, XCircle, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Field {
@@ -15,6 +15,15 @@ interface Field {
   options: { id: string; label: string; value: string }[];
 }
 
+interface FormSettings {
+  maxSubmissions: number | null;
+  allowMultipleSubmissions: boolean;
+  openAt: string | null;
+  closeAt: string | null;
+  successMessage: string | null;
+  redirectUrl: string | null;
+}
+
 interface Form {
   id: string;
   title: string;
@@ -23,14 +32,16 @@ interface Form {
   buttonColor: string;
   textColor: string;
   fields: Field[];
+  settings: FormSettings | null;
+  responseCount: number;
 }
-
 
 export default function PublicForm({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [form, setForm] = useState<Form | null>(null);
   const [values, setValues] = useState<Record<string, any>>({});
-  const [status, setStatus] = useState<'loading' | 'ready' | 'submitting' | 'success' | 'error'>('loading');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState<'loading' | 'ready' | 'submitting' | 'success' | 'error' | 'closed' | 'not-open' | 'limit-reached'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [submissionSettings, setSubmissionSettings] = useState<{ successMessage: string | null; redirectUrl: string | null } | null>(null);
 
@@ -51,7 +62,27 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
   const fetchForm = async () => {
     try {
       const res = await api.get(`/forms/slug/${slug}`);
-      setForm(res.data);
+      const formData = res.data;
+      setForm(formData);
+      
+      // Check form availability
+      const now = new Date();
+      
+      if (formData.settings?.openAt && new Date(formData.settings.openAt) > now) {
+        setStatus('not-open');
+        return;
+      }
+      
+      if (formData.settings?.closeAt && new Date(formData.settings.closeAt) < now) {
+        setStatus('closed');
+        return;
+      }
+      
+      if (formData.settings?.maxSubmissions && formData.responseCount >= formData.settings.maxSubmissions) {
+        setStatus('limit-reached');
+        return;
+      }
+      
       setStatus('ready');
     } catch (err: any) {
       setStatus('error');
@@ -59,8 +90,46 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
     }
   };
 
+  const validateField = (field: Field, value: any): string | null => {
+    if (field.required && (!value || (Array.isArray(value) && value.length === 0))) {
+      return 'This field is required';
+    }
+
+    if (value && field.type.key === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return 'Please enter a valid email address';
+      }
+    }
+
+    if (value && field.type.key === 'url') {
+      try {
+        new URL(value);
+      } catch {
+        return 'Please enter a valid URL';
+      }
+    }
+
+    if (value && field.type.key === 'phone') {
+      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      if (!phoneRegex.test(value) || value.replace(/\D/g, '').length < 10) {
+        return 'Please enter a valid phone number';
+      }
+    }
+
+    return null;
+  };
+
   const handleInputChange = (fieldId: string, value: any) => {
     setValues(prev => ({ ...prev, [fieldId]: value }));
+    // Clear error when user starts typing
+    if (errors[fieldId]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldId];
+        return newErrors;
+      });
+    }
   };
 
   const toggleMultiselect = (fieldId: string, optionValue: string) => {
@@ -75,6 +144,21 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
     e.preventDefault();
     if (!form) return;
 
+    // Validate all fields
+    const newErrors: Record<string, string> = {};
+    form.fields.forEach(field => {
+      const error = validateField(field, values[field.id]);
+      if (error) {
+        newErrors[field.id] = error;
+      }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error('Please fix the errors before submitting');
+      return;
+    }
+
     setStatus('submitting');
     try {
       const res = await api.post(`/forms/${form.id}/responses`, { values });
@@ -83,25 +167,94 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
       toast.success('Response submitted successfully!');
     } catch (err: any) {
       setStatus('ready');
-      toast.error(err.response?.data?.message || 'Submission failed. Please check your answers.');
+      const message = err.response?.data?.message || 'Submission failed. Please try again.';
+      setErrorMessage(message);
+      toast.error(message);
     }
   };
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/20 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white border border-slate-200 p-8 rounded-3xl text-center shadow-sm">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Form Unavailable</h1>
-          <p className="text-slate-500">{errorMessage}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50/20 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white border border-slate-100 p-10 rounded-2xl text-center shadow-lg shadow-slate-200/50">
+          <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-red-100">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 mb-2">Form Unavailable</h1>
+          <p className="text-slate-500 font-medium">{errorMessage}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'not-open') {
+    const openDate = form?.settings?.openAt ? new Date(form.settings.openAt) : null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50/20 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white border border-slate-100 p-10 rounded-2xl text-center shadow-lg shadow-slate-200/50">
+          <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-orange-100">
+            <Clock className="w-8 h-8 text-orange-600" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 mb-2">Form Not Yet Open</h1>
+          <p className="text-slate-500 font-medium mb-4">This form will open on:</p>
+          {openDate && (
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p className="text-lg font-bold text-slate-900">
+                {openDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+              <p className="text-sm text-slate-500 mt-1">
+                {openDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'closed') {
+    const closeDate = form?.settings?.closeAt ? new Date(form.settings.closeAt) : null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50/20 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white border border-slate-100 p-10 rounded-2xl text-center shadow-lg shadow-slate-200/50">
+          <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-red-100">
+            <XCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 mb-2">Form Closed</h1>
+          <p className="text-slate-500 font-medium mb-4">This form is no longer accepting responses.</p>
+          {closeDate && (
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Closed on</p>
+              <p className="text-lg font-bold text-slate-900">
+                {closeDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+              <p className="text-sm text-slate-500 mt-1">
+                {closeDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'limit-reached') {
+    return (
+      <div className="min-h-screen  flex items-center justify-center p-4" style={{ backgroundColor: form?.backgroundColor }}>
+        <div className="max-w-md w-full bg-white border border-slate-100 p-10 rounded-2xl text-center shadow-lg shadow-slate-200/50">
+          <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-amber-100">
+            <Calendar className="w-8 h-8 text-amber-600" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 mb-2">Submission Limit Reached</h1>
+          <p className="text-slate-500 font-medium mb-4">This form has reached its maximum number of submissions and is no longer active.</p>
         </div>
       </div>
     );
@@ -122,7 +275,7 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
             {submissionSettings?.redirectUrl ? 'Redirecting...' : 'Response Captured'}
           </h1>
           <p className="text-slate-500 mb-10 font-medium leading-relaxed">
-            {submissionSettings?.successMessage || 'Thank you for your valuable input. Your data has been securely synced to our servers.'}
+            {submissionSettings?.successMessage || form?.settings?.successMessage || 'Thank you for your valuable input. Your data has been securely synced to our servers.'}
           </p>
           
           {!submissionSettings?.redirectUrl ? (
@@ -150,18 +303,18 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl bg-white rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.1)] overflow-hidden"
+        className="w-full max-w-2xl bg-white rounded-2xl shadow-xl shadow-slate-300/50 overflow-hidden border border-slate-100"
       >
         <div className="p-8 md:p-16">
-          <header className="mb-12">
-            <h1 className="text-4xl font-black mb-4 tracking-tighter uppercase text-slate-900">{form?.title}</h1>
+          <header className="mb-10 pb-8 border-b border-slate-100">
+            <h1 className="text-3xl font-black mb-2 tracking-tight text-slate-900">{form?.title}</h1>
             <div 
-              className="h-1.5 w-16 rounded-full" 
+              className="h-1 w-12 rounded-full mt-3" 
               style={{ backgroundColor: form?.primaryColor }}
             />
           </header>
 
-          <form onSubmit={handleSubmit} className="space-y-10">
+          <form onSubmit={handleSubmit} className="space-y-8">
           {form?.fields.map((field) => (
             <motion.div 
               key={field.id}
@@ -171,7 +324,7 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
             >
               <div className="flex items-baseline justify-between">
                 <label 
-                  className="text-sm font-bold tracking-tight text-slate-700 uppercase"
+                  className="text-sm font-bold text-slate-900"
                 >
                   {field.label}
                   {field.required && <span className="ml-1" style={{ color: form?.primaryColor }}>*</span>}
@@ -190,9 +343,9 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
                 {(field.type.key === 'text' || field.type.key === 'email' || field.type.key === 'url' || field.type.key === 'phone') && (
                   <input
                     type={field.type.key === 'email' ? 'email' : field.type.key === 'url' ? 'url' : field.type.key === 'phone' ? 'tel' : 'text'}
-                    required={field.required}
+                    value={values[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-medium"
+                    className={`w-full bg-slate-50 border ${errors[field.id] ? 'border-red-500 focus:border-red-600 focus:ring-red-600/20' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/20'} rounded-lg py-3 px-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all text-sm`}
                     placeholder={
                       field.type.key === 'email' ? 'yourname@example.com' : 
                       field.type.key === 'url' ? 'https://example.com' : 
@@ -205,18 +358,18 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
                 {field.type.key === 'number' && (
                   <input
                     type="number"
-                    required={field.required}
+                    value={values[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, Number(e.target.value))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-5 text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-medium"
+                    className={`w-full bg-slate-50 border ${errors[field.id] ? 'border-red-500 focus:border-red-600 focus:ring-red-600/20' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/20'} rounded-lg py-3 px-4 text-slate-900 focus:outline-none focus:ring-2 transition-all text-sm`}
                   />
                 )}
 
                 {field.type.key === 'date' && (
                   <input
                     type="date"
-                    required={field.required}
+                    value={values[field.id] || ''}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-5 text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-medium"
+                    className={`w-full bg-slate-50 border ${errors[field.id] ? 'border-red-500 focus:border-red-600 focus:ring-red-600/20' : 'border-slate-200 focus:border-blue-600 focus:ring-blue-600/20'} rounded-lg py-3 px-4 text-slate-900 focus:outline-none focus:ring-2 transition-all text-sm`}
                   />
                 )}
 
@@ -254,7 +407,7 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
                           key={opt.id}
                           type="button"
                           onClick={() => handleInputChange(field.id, [opt.value])}
-                          className="w-full flex items-center p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 transition-all group"
+                          className="w-full flex items-center p-3.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 transition-all group"
                         >
                           <div 
                             style={{ 
@@ -283,7 +436,7 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
                           key={opt.id}
                           type="button"
                           onClick={() => toggleMultiselect(field.id, opt.value)}
-                          className="w-full flex items-center p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:border-slate-300 transition-all group"
+                          className="w-full flex items-center p-3.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 transition-all group"
                         >
                           <div 
                             style={{ 
@@ -339,6 +492,17 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
                   </div>
                 )}
               </div>
+
+              {errors[field.id] && (
+                <motion.p 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-sm text-red-600 font-medium flex items-center space-x-1"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{errors[field.id]}</span>
+                </motion.p>
+              )}
             </motion.div>
           ))}
 
@@ -349,7 +513,7 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
               style={{ 
                 backgroundColor: form?.buttonColor, 
               }}
-              className="w-full h-16 font-black uppercase tracking-[0.2em] rounded-2xl transition-all transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-3 group shadow-xl shadow-blue-100 hover:brightness-110 text-white"
+              className="w-full h-14 font-bold text-sm rounded-xl transition-all transform active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-2 group shadow-lg hover:shadow-xl hover:brightness-105 text-white"
             >
               {status === 'submitting' ? (
                 <Loader2 className="animate-spin w-6 h-6" />
@@ -360,8 +524,8 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
                 </>
               )}
             </button>
-            <p className="text-center text-[10px] text-slate-400 font-bold mt-8 uppercase tracking-[0.15em] leading-loose">
-              By submitting, you agree to secure data processing via FormFlow Node infra.
+            <p className="text-center text-xs text-slate-400 font-medium mt-6">
+              Secured by FormFlow
             </p>
           </div>
         </form>
