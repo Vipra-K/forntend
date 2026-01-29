@@ -234,7 +234,7 @@ function FieldItem({
             <Icon className="w-4 h-4" />
           </div>
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-            {field.type.name}
+            {field.type.key}
           </span>
         </div>
         <button 
