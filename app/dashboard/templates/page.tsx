@@ -72,7 +72,7 @@ export default function TemplatesPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-8 lg:px-12 py-12">
+    <div className="max-w-6xl px-8 lg:px-12 py-12">
       {/* Header */}
       <header className="mb-16">
             <div className="flex items-center space-x-2 text-blue-600 mb-2 font-black uppercase tracking-[0.3em] text-[10px]">

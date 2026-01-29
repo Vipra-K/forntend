@@ -42,15 +42,14 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex overflow-hidden">
+    <div className="h-screen bg-white text-slate-900 flex overflow-hidden">
       <Sidebar />
       
       {/* Context Provider Shortcut: We'll use a custom event or just export the setter if needed, 
           but for now we'll just keep the modal here and trigger it via a window event or simple check */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {children}
       </div>
-
       {/* Global Create Form Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-[2px]">
