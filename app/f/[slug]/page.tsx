@@ -91,7 +91,7 @@ export default function PublicForm({ params }: { params: Promise<{ slug: string 
   };
 
   const validateField = (field: Field, value: any): string | null => {
-    if (field.required && (!value || (Array.isArray(value) && value.length === 0))) {
+    if (field.required && (value === null || value === undefined || (Array.isArray(value) && value.length === 0) || value === '')) {
       return 'This field is required';
     }
 
