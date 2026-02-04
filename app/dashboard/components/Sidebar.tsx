@@ -6,7 +6,8 @@ import {
   LayoutGrid, 
   Settings, 
   LogOut,
-  User
+  User,
+  Users
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
@@ -18,8 +19,9 @@ export function Sidebar() {
 
   const navItems = [
     { label: 'My Forms', icon: FileText, path: '/dashboard' },
+    { label: 'Leads', icon: Users, path: '/dashboard/leads' },
     { label: 'Templates', icon: LayoutGrid, path: '/dashboard/templates' },
-    { label: 'Settings', icon: Settings, path: '/dashboard/settings' }, // Fixed icon and path
+    { label: 'Settings', icon: Settings, path: '/dashboard/settings' },
   ];
 
   const isActive = (path: string) => pathname === path;

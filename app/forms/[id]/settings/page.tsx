@@ -14,8 +14,6 @@ import {
   CheckCircle2,
   FileText,
   AlertCircle,
-  Webhook,
-  Trash,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -34,8 +32,6 @@ export default function SettingsPage({
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [webhookUrl, setWebhookUrl] = useState<string>("");
-  const [isWebhookLoading, setIsWebhookLoading] = useState(false);
 
   useEffect(() => {
     fetchForm();
@@ -45,22 +41,10 @@ export default function SettingsPage({
     try {
       const res = await api.get(`/forms/${id}`);
       setForm(res.data);
-      fetchWebhook();
     } catch (err) {
       console.error("Failed to fetch form", err);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchWebhook = async () => {
-    try {
-      const res = await api.get(`/forms/${id}/webhook`);
-      if (res.data && res.data.url) {
-        setWebhookUrl(res.data.url);
-      }
-    } catch (err) {
-      console.error("Failed to fetch webhook", err);
     }
   };
 
@@ -94,51 +78,6 @@ export default function SettingsPage({
       router.replace("/dashboard");
     } catch (err) {
       alert("Deletion failed");
-    }
-  };
-
-  const handleWebhookSave = async () => {
-    if (!webhookUrl.trim()) {
-      setMessage({ type: "error", text: "Webhook URL is required." });
-      return;
-    }
-
-    setIsWebhookLoading(true);
-    setMessage(null);
-    try {
-      await api.post(`/forms/${id}/webhook`, {
-        url: webhookUrl.trim(),
-      });
-      setMessage({ type: "success", text: "Webhook URL saved successfully." });
-      setTimeout(() => setMessage(null), 3000);
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: err.response?.data?.message || "Failed to save webhook URL.",
-      });
-    } finally {
-      setIsWebhookLoading(false);
-    }
-  };
-
-  const handleWebhookDelete = async () => {
-    setIsWebhookLoading(true);
-    setMessage(null);
-    try {
-      await api.delete(`/forms/${id}/webhook`);
-      setWebhookUrl("");
-      setMessage({
-        type: "success",
-        text: "Webhook URL deleted successfully.",
-      });
-      setTimeout(() => setMessage(null), 3000);
-    } catch (err: any) {
-      setMessage({
-        type: "error",
-        text: err.response?.data?.message || "Failed to delete webhook URL.",
-      });
-    } finally {
-      setIsWebhookLoading(false);
     }
   };
 
@@ -250,58 +189,6 @@ export default function SettingsPage({
                   Note: Changing this will invalidate existing links to this
                   form.
                 </p>
-              </div>
-            </section>
-
-            {/* Webhook Settings */}
-            <section className="space-y-6">
-              <div className="flex items-center space-x-2 border-b border-slate-100 pb-4">
-                <Webhook className="w-4 h-4 text-slate-400" />
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                  Webhook
-                </h3>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
-                  Webhook URL
-                </label>
-                <input
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  placeholder="https://example.com/webhook"
-                  className="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all font-medium"
-                />
-                <p className="text-[10px] text-slate-400 mt-2 ml-1">
-                  Receive form responses at this URL when submissions are made.
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleWebhookSave}
-                  disabled={isWebhookLoading || !webhookUrl.trim()}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all flex items-center space-x-2 disabled:opacity-50 shadow-sm"
-                >
-                  {isWebhookLoading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Save className="w-3.5 h-3.5" />
-                  )}
-                  <span>{isWebhookLoading ? "Saving..." : "Save Webhook"}</span>
-                </button>
-                {webhookUrl && (
-                  <button
-                    type="button"
-                    onClick={handleWebhookDelete}
-                    disabled={isWebhookLoading}
-                    className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center space-x-2 disabled:opacity-50"
-                  >
-                    <Trash className="w-3.5 h-3.5" />
-                    <span>Delete</span>
-                  </button>
-                )}
               </div>
             </section>
 
