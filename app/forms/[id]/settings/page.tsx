@@ -83,8 +83,43 @@ export default function SettingsPage({
 
   if (isLoading || !form) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      <div className="h-full overflow-y-auto bg-white">
+        <main className="p-8 lg:p-12">
+          <div className="max-w-3xl mx-auto">
+            <div className="mb-10">
+              <div className="h-6 w-24 bg-slate-200 rounded animate-pulse mb-2" />
+              <div className="h-4 w-64 bg-slate-100 rounded animate-pulse" />
+            </div>
+            <div className="space-y-10">
+              <div className="space-y-6">
+                <div className="flex items-center space-x-2 border-b border-slate-100 pb-4">
+                  <div className="w-4 h-4 bg-slate-200 rounded animate-pulse" />
+                  <div className="h-4 w-36 bg-slate-200 rounded animate-pulse" />
+                </div>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <div className="h-3 w-20 bg-slate-100 rounded animate-pulse" />
+                    <div className="h-11 w-full bg-slate-50 border border-slate-100 rounded-lg animate-pulse" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-20 bg-slate-100 rounded animate-pulse" />
+                    <div className="h-28 w-full bg-slate-50 border border-slate-100 rounded-lg animate-pulse" />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div className="flex items-center space-x-2 border-b border-slate-100 pb-4">
+                  <div className="w-4 h-4 bg-slate-200 rounded animate-pulse" />
+                  <div className="h-4 w-28 bg-slate-200 rounded animate-pulse" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
+                  <div className="h-11 w-full bg-slate-50 border border-slate-100 rounded-lg animate-pulse" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

@@ -30,13 +30,29 @@ interface Lead {
   payload: {
     event: string;
     formId: string;
-    formVersionId: string;
+    formVersionId?: string;
     responseId: string;
     submittedAt: string;
-    values: LeadPayloadValue[];
+    values?: LeadPayloadValue[];
+    fields?: Record<string, unknown>;
   };
   submittedAt: string;
   createdAt: string;
+}
+
+// Helper to normalize payload data to values array format
+function getPayloadValues(payload: Lead["payload"]): LeadPayloadValue[] {
+  if (payload?.values && Array.isArray(payload.values)) {
+    return payload.values;
+  }
+  if (payload?.fields && typeof payload.fields === "object") {
+    return Object.entries(payload.fields).map(([fieldName, value]) => ({
+      key: fieldName,
+      fieldName,
+      value,
+    }));
+  }
+  return [];
 }
 
 interface LeadsResponse {
@@ -84,11 +100,11 @@ export default function LeadsPage() {
               Form responses as leads
             </span>
           </div>
-          <h1 className="text-5xl font-black text-slate-900 tracking-tight mb-2">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
             Leads
           </h1>
           <p className="text-slate-500 font-medium text-base">
-            Form submissions captured here for testing and CRM integration.
+            Form submissions captured here for CRM integration testing.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -104,8 +120,23 @@ export default function LeadsPage() {
       </header>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-24 bg-slate-50 rounded-2xl border border-slate-100">
-          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="bg-white border border-slate-100 rounded-2xl p-6"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-100 rounded-xl animate-pulse shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-5 w-48 bg-slate-100 rounded-lg animate-pulse" />
+                  <div className="h-3 w-40 bg-slate-50 rounded animate-pulse" />
+                  <div className="h-3 w-64 bg-slate-50 rounded animate-pulse" />
+                </div>
+                <div className="w-20 h-4 bg-slate-50 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : !data?.leads?.length ? (
         <div className="flex flex-col items-center justify-center py-24 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-3xl border border-slate-100">
@@ -113,7 +144,7 @@ export default function LeadsPage() {
             <Users className="w-9 h-9 text-slate-300" />
           </div>
           <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
-            No leads yet
+            No Leads Yet
           </h3>
           <p className="text-slate-500 font-medium text-center max-w-sm">
             Submit a form response (from a published form) and it will appear
@@ -142,7 +173,7 @@ export default function LeadsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-slate-900 truncate">
-                      {lead.formTitle || "Untitled form"}
+                      {lead.formTitle || "Untitled Form"}
                     </p>
                     <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                       <Calendar className="w-3.5 h-3.5 shrink-0" />
@@ -169,10 +200,10 @@ export default function LeadsPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {typeof lead.payload === "object" &&
-                    lead.payload?.values?.length > 0 && (
+                    getPayloadValues(lead.payload).length > 0 && (
                       <span className="text-xs font-semibold text-slate-400">
-                        {lead.payload.values.length} field
-                        {lead.payload.values.length !== 1 ? "s" : ""}
+                        {getPayloadValues(lead.payload).length} field
+                        {getPayloadValues(lead.payload).length !== 1 ? "s" : ""}
                       </span>
                     )}
                   {expandedId === lead.id ? (
@@ -193,7 +224,7 @@ export default function LeadsPage() {
                   >
                     <div className="p-6 pt-4">
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
-                        Webhook IDs
+                        Webhook Identifiers
                       </p>
                       <div className="grid gap-1.5 mb-4 text-xs font-mono text-slate-600">
                         <div>
@@ -217,11 +248,19 @@ export default function LeadsPage() {
                           )}
                       </div>
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3">
-                        Response data (webhook payload)
+                        Response Data
                       </p>
                       <div className="space-y-2">
-                        {typeof lead.payload === "object" &&
-                          lead.payload?.values?.map(
+                        {(() => {
+                          const values = getPayloadValues(lead.payload);
+                          if (values.length === 0) {
+                            return (
+                              <p className="text-slate-400 text-sm">
+                                No field values available
+                              </p>
+                            );
+                          }
+                          return values.map(
                             (v: LeadPayloadValue, i: number) => (
                               <div
                                 key={i}
@@ -240,14 +279,9 @@ export default function LeadsPage() {
                                   )}
                                 </span>
                               </div>
-                            )
-                          )}
-                        {(!lead.payload?.values ||
-                          lead.payload.values.length === 0) && (
-                          <p className="text-slate-400 text-sm">
-                            No field values
-                          </p>
-                        )}
+                            ),
+                          );
+                        })()}
                       </div>
                     </div>
                   </motion.div>

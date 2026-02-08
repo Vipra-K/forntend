@@ -1,15 +1,27 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
-import { Mail, Loader2, Lock, ArrowRight, FileText, AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
+import {
+  Mail,
+  Loader2,
+  Lock,
+  ArrowRight,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const { forgotPassword } = useAuth();
   const router = useRouter();
 
@@ -20,13 +32,16 @@ export default function ForgotPasswordPage() {
 
     try {
       const res = await forgotPassword(email);
-      setMessage({ type: 'success', text: res.message });
+      setMessage({ type: "success", text: res.message });
       // In dev mode, we might want to show the debug token if it's there
       if (res.debugToken) {
-        console.log('Reset Token (Dev Only):', res.debugToken);
+        console.log("Reset Token (Dev Only):", res.debugToken);
       }
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Something went wrong' });
+      setMessage({
+        type: "error",
+        text: err.response?.data?.message || "Something went wrong",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -41,8 +56,8 @@ export default function ForgotPasswordPage() {
         className="w-full max-w-md relative z-10"
       >
         <div className="bg-white border border-slate-200 p-8 lg:p-12 rounded-2xl shadow-xl">
-          <button 
-            onClick={() => router.push('/login')}
+          <button
+            onClick={() => router.push("/login")}
             className="flex items-center space-x-2 text-slate-400 hover:text-slate-600 transition-colors text-xs font-bold uppercase tracking-widest mb-10 group"
           >
             <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -68,9 +83,13 @@ export default function ForgotPasswordPage() {
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className={`${message.type === 'success' ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-600'} text-[11px] font-semibold uppercase tracking-wider p-4 rounded-lg flex items-start space-x-2`}
+                  className={`${message.type === "success" ? "bg-green-50 border-green-100 text-green-700" : "bg-red-50 border-red-100 text-red-600"} text-xs font-semibold p-4 rounded-lg flex items-start space-x-2`}
                 >
-                  {message.type === 'success' ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                  {message.type === "success" ? (
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  )}
                   <span>{message.text}</span>
                 </motion.div>
               )}
@@ -112,4 +131,3 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
-

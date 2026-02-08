@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import api from '../../../lib/api';
-import { 
-  Search, 
-  Sparkles, 
-  FileText, 
-  Users, 
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import api from "../../../lib/api";
+import {
+  Search,
+  Sparkles,
+  FileText,
+  Users,
   Calendar,
   ClipboardList,
   MessageSquare,
@@ -15,10 +15,10 @@ import {
   Heart,
   Briefcase,
   GraduationCap,
-  Loader2
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+  Loader2,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 interface Template {
   id: string;
@@ -29,32 +29,32 @@ interface Template {
 }
 
 const categoryIcons: Record<string, any> = {
-  'Contact': MessageSquare,
-  'Survey': ClipboardList,
-  'Registration': Users,
-  'Event': Calendar,
-  'Order': ShoppingCart,
-  'Feedback': Heart,
-  'Application': Briefcase,
-  'Education': GraduationCap,
+  Contact: MessageSquare,
+  Survey: ClipboardList,
+  Registration: Users,
+  Event: Calendar,
+  Order: ShoppingCart,
+  Feedback: Heart,
+  Application: Briefcase,
+  Education: GraduationCap,
 };
 
 const categoryColors: Record<string, string> = {
-  'Contact': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Survey': 'bg-purple-100 text-purple-700 border-purple-200',
-  'Registration': 'bg-green-100 text-green-700 border-green-200',
-  'Event': 'bg-orange-100 text-orange-700 border-orange-200',
-  'Order': 'bg-pink-100 text-pink-700 border-pink-200',
-  'Feedback': 'bg-red-100 text-red-700 border-red-200',
-  'Application': 'bg-indigo-100 text-indigo-700 border-indigo-200',
-  'Education': 'bg-teal-100 text-teal-700 border-teal-200',
+  Contact: "bg-blue-100 text-blue-700 border-blue-200",
+  Survey: "bg-purple-100 text-purple-700 border-purple-200",
+  Registration: "bg-green-100 text-green-700 border-green-200",
+  Event: "bg-orange-100 text-orange-700 border-orange-200",
+  Order: "bg-pink-100 text-pink-700 border-pink-200",
+  Feedback: "bg-red-100 text-red-700 border-red-200",
+  Application: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  Education: "bg-teal-100 text-teal-700 border-teal-200",
 };
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const router = useRouter();
 
   useEffect(() => {
@@ -63,11 +63,11 @@ export default function TemplatesPage() {
 
   const fetchTemplates = async () => {
     try {
-      const res = await api.get('/form-templates');
+      const res = await api.get("/form-templates");
       setTemplates(res.data);
     } catch (err) {
-      console.error('Failed to fetch templates', err);
-      toast.error('Failed to load templates');
+      console.error("Failed to fetch templates", err);
+      toast.error("Failed to load templates");
     } finally {
       setIsLoading(false);
     }
@@ -76,20 +76,25 @@ export default function TemplatesPage() {
   const createFromTemplate = async (templateId: string) => {
     try {
       const res = await api.post(`/forms/template/${templateId}`);
-      toast.success('Form created from template!');
+      toast.success("Form created from template!");
       router.push(`/forms/${res.data.formId}/edit`);
     } catch (err) {
-      console.error('Failed to create form from template', err);
-      toast.error('Failed to create form');
+      console.error("Failed to create form from template", err);
+      toast.error("Failed to create form");
     }
   };
 
-  const categories = ['All', ...Array.from(new Set(templates.map(t => t.category)))];
+  const categories = [
+    "All",
+    ...Array.from(new Set(templates.map((t) => t.category))),
+  ];
 
-  const filteredTemplates = templates.filter(template => {
-    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || template.category === selectedCategory;
+  const filteredTemplates = templates.filter((template) => {
+    const matchesSearch =
+      template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      template.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "All" || template.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -99,10 +104,17 @@ export default function TemplatesPage() {
       <header className="mb-12">
         <div className="flex items-center space-x-2 text-purple-600 mb-3">
           <Sparkles className="w-3.5 h-3.5" />
-          <span className="text-[10px] font-black uppercase tracking-[0.25em]">Templates</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.25em]">
+            Templates
+          </span>
         </div>
-        <h1 className="text-5xl font-black text-slate-900 tracking-tight mb-2">Form Templates</h1>
-        <p className="text-slate-500 font-medium text-base">Start with a professionally designed template and customize it to your needs.</p>
+        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+          Form Templates
+        </h1>
+        <p className="text-slate-500 font-medium text-base">
+          Start with a professionally designed template and customize it to your
+          needs.
+        </p>
       </header>
 
       {/* Search and Filter */}
@@ -127,11 +139,11 @@ export default function TemplatesPage() {
               onClick={() => setSelectedCategory(category)}
               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
                 selectedCategory === category
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                  : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300 hover:shadow-md'
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                  : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300 hover:shadow-md"
               }`}
             >
-              {category}
+              {category.charAt(0).toUpperCase() + category.slice(1)}
             </button>
           ))}
         </div>
@@ -140,8 +152,25 @@ export default function TemplatesPage() {
       {/* Templates Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="h-64 bg-slate-50 animate-pulse rounded-2xl" />
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="bg-white border border-slate-100 rounded-2xl p-6 space-y-4"
+            >
+              <div className="flex items-start justify-between">
+                <div className="w-12 h-12 bg-slate-100 rounded-xl animate-pulse" />
+                <div className="h-6 w-20 bg-slate-50 rounded-lg animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-5 w-3/4 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="h-4 w-full bg-slate-50 rounded animate-pulse" />
+                <div className="h-4 w-2/3 bg-slate-50 rounded animate-pulse" />
+              </div>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <div className="h-4 w-16 bg-slate-50 rounded animate-pulse" />
+                <div className="h-8 w-24 bg-slate-100 rounded-lg animate-pulse" />
+              </div>
+            </div>
           ))}
         </div>
       ) : filteredTemplates.length === 0 ? (
@@ -149,7 +178,9 @@ export default function TemplatesPage() {
           <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200/50 mb-6">
             <Search className="w-9 h-9 text-slate-300" />
           </div>
-          <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">No templates found</h3>
+          <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">
+            No Templates Found
+          </h3>
           <p className="text-slate-500 font-medium text-center max-w-sm">
             Try adjusting your search or filter to find what you're looking for.
           </p>
@@ -157,9 +188,9 @@ export default function TemplatesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTemplates.map((template, index) => (
-            <TemplateCard 
-              key={template.id} 
-              template={template} 
+            <TemplateCard
+              key={template.id}
+              template={template}
               onUse={() => createFromTemplate(template.id)}
               index={index}
             />
@@ -170,10 +201,22 @@ export default function TemplatesPage() {
   );
 }
 
-function TemplateCard({ template, onUse, index }: { template: Template, onUse: () => void, index: number }) {
+function TemplateCard({
+  template,
+  onUse,
+  index,
+}: {
+  template: Template;
+  onUse: () => void;
+  index: number;
+}) {
   const Icon = categoryIcons[template.category] || FileText;
-  const colorClass = categoryColors[template.category] || 'bg-slate-100 text-slate-700 border-slate-200';
-  const fieldCount = Array.isArray(template.fields) ? template.fields.length : 0;
+  const colorClass =
+    categoryColors[template.category] ||
+    "bg-slate-100 text-slate-700 border-slate-200";
+  const fieldCount = Array.isArray(template.fields)
+    ? template.fields.length
+    : 0;
 
   return (
     <motion.div
@@ -188,7 +231,9 @@ function TemplateCard({ template, onUse, index }: { template: Template, onUse: (
         <div className="p-3 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-xl group-hover:from-blue-50 group-hover:to-blue-100/50 transition-all duration-300">
           <Icon className="w-6 h-6 text-slate-600 group-hover:text-blue-600 transition-colors duration-300" />
         </div>
-        <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${colorClass}`}>
+        <span
+          className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${colorClass}`}
+        >
           {template.category}
         </span>
       </div>
@@ -199,7 +244,8 @@ function TemplateCard({ template, onUse, index }: { template: Template, onUse: (
           {template.name}
         </h3>
         <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">
-          {template.description || 'A professionally designed form template ready to use.'}
+          {template.description ||
+            "A professionally designed form template ready to use."}
         </p>
       </div>
 
@@ -209,8 +255,11 @@ function TemplateCard({ template, onUse, index }: { template: Template, onUse: (
           <FileText className="w-3.5 h-3.5" />
           <span>{fieldCount} fields</span>
         </div>
-        <button 
-          onClick={(e) => { e.stopPropagation(); onUse(); }}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onUse();
+          }}
           className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-all opacity-0 group-hover:opacity-100"
         >
           Use Template

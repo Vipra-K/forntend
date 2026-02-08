@@ -79,9 +79,9 @@ export function ResponsesTable({
   const hasResponses = responseData && responseData.responses.length > 0;
 
   return (
-    <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-slate-50/60 border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-slate-100 space-y-4">
+      <div className="p-6 border-b border-slate-200/60 space-y-4 bg-white/70 backdrop-blur-[1px]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center space-x-4 flex-1">
             <div className="relative flex-1 max-w-md">
@@ -152,7 +152,7 @@ export function ResponsesTable({
       {/* Table */}
       {hasResponses ? (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto bg-white">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50">
@@ -169,7 +169,7 @@ export function ResponsesTable({
               <tbody className="divide-y divide-slate-100">
                 {filteredResponses.map((resp) => (
                   <tr key={resp.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 text-xs text-slate-500 font-medium sticky left-0 bg-white group-hover:bg-slate-50/50">
+                    <td className="px-6 py-4 text-xs text-slate-500 font-medium sticky left-0 bg-white">
                       <div>{new Date(resp.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                       <div className="text-slate-400 text-xs mt-0.5">
                         {new Date(resp.submittedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -189,7 +189,7 @@ export function ResponsesTable({
           </div>
 
           {/* Pagination */}
-          <div className="p-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="p-6 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-6 bg-white/70 backdrop-blur-[1px]">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6">
               <span className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">
                 Page {responseData?.pagination.page} of {responseData?.pagination.totalPages}

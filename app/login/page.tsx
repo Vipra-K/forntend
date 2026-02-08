@@ -1,36 +1,36 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
-import { Mail, Lock, Loader2, ArrowRight, FileText, AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
+import { Loader2, ArrowRight, FileText, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, register } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsSubmitting(true);
-
     try {
       if (isLogin) {
         await login(email, password);
-        toast.success('Welcome back!');
+        toast.success("Welcome back!");
       } else {
-        await register(email, password);
-        toast.success('Account created successfully');
+        await register(name, email, password);
+        toast.success("Account created successfully");
       }
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Authentication failed';
+      const msg = err.response?.data?.message || "Authentication failed";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -52,12 +52,12 @@ export default function AuthPage() {
               <FileText className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">
-              {isLogin ? 'Sign in to your account' : 'Create your account'}
+              {isLogin ? "Sign In to Your Account" : "Create Your Account"}
             </h1>
             <p className="text-sm text-slate-500">
-              {isLogin 
-                ? 'Welcome back. Please enter your details.' 
-                : 'Enter your information below to get started.'}
+              {isLogin
+                ? "Welcome back. Please enter your details."
+                : "Enter your information below to get started."}
             </p>
           </div>
 
@@ -68,10 +68,33 @@ export default function AuthPage() {
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="bg-red-50 border border-red-100 text-red-600 text-[11px] font-semibold uppercase tracking-wider p-3 rounded-lg flex items-center space-x-2"
+                  className="bg-red-50 border border-red-100 text-red-600 text-xs font-semibold p-3 rounded-lg flex items-center space-x-2"
                 >
-                  <AlertCircle className="w-3.5 h-3.5" />
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   <span>{error}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence mode="wait">
+              {!isLogin && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-1.5 overflow-hidden"
+                >
+                  <label className="text-xs font-semibold text-slate-700 ml-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full bg-white border border-slate-200 rounded-lg py-2.5 px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-sm"
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -100,6 +123,7 @@ export default function AuthPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                minLength={8}
                 className="w-full bg-white border border-slate-200 rounded-lg py-2.5 px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-sm"
               />
             </div>
@@ -108,8 +132,8 @@ export default function AuthPage() {
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => router.push('/forgot-password')}
-                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors uppercase tracking-wider"
+                  onClick={() => router.push("/forgot-password")}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                 >
                   Forgot Password?
                 </button>
@@ -125,7 +149,7 @@ export default function AuthPage() {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <span>{isLogin ? 'Sign in' : 'Create account'}</span>
+                  <span>{isLogin ? "Sign In" : "Create Account"}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
@@ -136,19 +160,19 @@ export default function AuthPage() {
             <button
               onClick={() => {
                 setIsLogin(!isLogin);
-                setError('');
+                setError("");
               }}
               className="text-slate-500 hover:text-blue-600 transition-colors text-xs font-medium"
             >
-              {isLogin 
-                ? "Don't have an account? Sign up" 
+              {isLogin
+                ? "Don't have an account? Sign up"
                 : "Already have an account? Sign in"}
             </button>
           </div>
         </div>
-        
+
         <p className="mt-8 text-center text-slate-400 text-[10px] font-medium tracking-wide">
-          © 2026 FormBuilder Inc. All rights reserved.
+          &copy; 2026 FormFlow. All rights reserved.
         </p>
       </motion.div>
     </div>
