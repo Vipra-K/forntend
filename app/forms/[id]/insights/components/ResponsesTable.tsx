@@ -1,7 +1,15 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Search, Download, FileText, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  Search,
+  Download,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  Trash2,
+} from "lucide-react";
 
 interface ResponseRecord {
   id: string;
@@ -26,14 +34,15 @@ interface ResponsesTableProps {
   setSearchQuery: (query: string) => void;
   currentPage: number;
   setCurrentPage: (page: number | ((prev: number) => number)) => void;
-  sortOrder: 'asc' | 'desc';
-  setSortOrder: (order: 'asc' | 'desc') => void;
+  sortOrder: "asc" | "desc";
+  setSortOrder: (order: "asc" | "desc") => void;
   startDate: string;
   setStartDate: (date: string) => void;
   endDate: string;
   setEndDate: (date: string) => void;
   onExportCSV: () => void;
   onExportJSON: () => void;
+  onDeleteResponse?: (responseId: string) => void;
 }
 
 export function ResponsesTable({
@@ -49,32 +58,35 @@ export function ResponsesTable({
   endDate,
   setEndDate,
   onExportCSV,
-  onExportJSON
+  onExportJSON,
+  onDeleteResponse,
 }: ResponsesTableProps) {
-  
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   const formatValue = (val: any) => {
-    if (val === null || val === undefined) return '-';
-    if (Array.isArray(val)) return val.join(', ');
-    if (typeof val === 'boolean') return val ? 'Yes' : 'No';
-    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+    if (val === null || val === undefined) return "-";
+    if (Array.isArray(val)) return val.join(", ");
+    if (typeof val === "boolean") return val ? "Yes" : "No";
+    if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
       const date = new Date(val);
       if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
-          year: 'numeric' 
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
         });
       }
     }
     return String(val);
   };
 
-  const filteredResponses = responseData?.responses.filter(resp => {
-    if (!searchQuery) return true;
-    return resp.answers.some(ans => 
-      String(ans.value).toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }) || [];
+  const filteredResponses =
+    responseData?.responses.filter((resp) => {
+      if (!searchQuery) return true;
+      return resp.answers.some((ans) =>
+        String(ans.value).toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+    }) || [];
 
   const hasResponses = responseData && responseData.responses.length > 0;
 
@@ -96,21 +108,27 @@ export function ResponsesTable({
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <button 
-              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+            <button
+              onClick={() =>
+                setSortOrder(sortOrder === "desc" ? "asc" : "desc")
+              }
               className="flex items-center space-x-2 bg-white border border-slate-200 px-4 py-2.5 rounded-lg text-xs font-bold text-slate-700 hover:border-slate-300 transition-all"
             >
-              <TrendingUp className={`w-3.5 h-3.5 ${sortOrder === 'asc' ? 'rotate-180' : ''} transition-transform`} />
-              <span>{sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}</span>
+              <TrendingUp
+                className={`w-3.5 h-3.5 ${sortOrder === "asc" ? "rotate-180" : ""} transition-transform`}
+              />
+              <span>
+                {sortOrder === "desc" ? "Newest First" : "Oldest First"}
+              </span>
             </button>
-            <button 
+            <button
               onClick={onExportJSON}
               className="flex items-center justify-center space-x-2 bg-white border border-slate-200 px-4 py-2.5 rounded-lg text-xs font-bold text-slate-700 hover:border-slate-300 transition-all"
             >
               <Download className="w-3.5 h-3.5" />
               <span>JSON</span>
             </button>
-            <button 
+            <button
               onClick={onExportCSV}
               className="flex items-center justify-center space-x-2 bg-blue-600 px-4 py-2.5 rounded-lg text-xs font-bold text-white hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
             >
@@ -123,23 +141,28 @@ export function ResponsesTable({
         {/* Filters Row */}
         <div className="flex flex-wrap items-center gap-4 pt-2">
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Date Range:</span>
-            <input 
-              type="date" 
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Date Range:
+            </span>
+            <input
+              type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
             />
             <span className="text-slate-400">to</span>
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
             />
             {(startDate || endDate) && (
-              <button 
-                onClick={() => { setStartDate(''); setEndDate(''); }}
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
                 className="text-xs font-bold text-red-600 hover:underline ml-2"
               >
                 Clear
@@ -159,29 +182,83 @@ export function ResponsesTable({
                   <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wide border-b border-slate-100 w-48 sticky left-0 bg-slate-50 z-10">
                     Submitted
                   </th>
-                  {responseData?.fields.map(f => (
-                    <th key={f.id} className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wide border-b border-slate-100">
+                  {responseData?.fields.map((f) => (
+                    <th
+                      key={f.id}
+                      className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wide border-b border-slate-100"
+                    >
                       {f.label}
                     </th>
                   ))}
+                  {onDeleteResponse && (
+                    <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-wide border-b border-slate-100 w-20"></th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredResponses.map((resp) => (
-                  <tr key={resp.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr
+                    key={resp.id}
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
                     <td className="px-6 py-4 text-xs text-slate-500 font-medium sticky left-0 bg-white">
-                      <div>{new Date(resp.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                      <div>
+                        {new Date(resp.submittedAt).toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric" },
+                        )}
+                      </div>
                       <div className="text-slate-400 text-xs mt-0.5">
-                        {new Date(resp.submittedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(resp.submittedAt).toLocaleTimeString(
+                          "en-US",
+                          { hour: "2-digit", minute: "2-digit" },
+                        )}
                       </div>
                     </td>
                     {resp.answers.map((ans, idx) => (
-                      <td key={idx} className="px-6 py-4 text-sm font-medium text-slate-700">
-                        <div className="max-w-xs truncate" title={formatValue(ans.value)}>
+                      <td
+                        key={idx}
+                        className="px-6 py-4 text-sm font-medium text-slate-700"
+                      >
+                        <div
+                          className="max-w-xs truncate"
+                          title={formatValue(ans.value)}
+                        >
                           {formatValue(ans.value)}
                         </div>
                       </td>
                     ))}
+                    {onDeleteResponse && (
+                      <td className="px-6 py-4">
+                        {confirmDeleteId === resp.id ? (
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => {
+                                onDeleteResponse(resp.id);
+                                setConfirmDeleteId(null);
+                              }}
+                              className="px-2.5 py-1 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-2.5 py-1 text-xs font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-all"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteId(resp.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="Delete response"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -192,25 +269,33 @@ export function ResponsesTable({
           <div className="p-6 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-6 bg-white/70 backdrop-blur-[1px]">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6">
               <span className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">
-                Page {responseData?.pagination.page} of {responseData?.pagination.totalPages}
+                Page {responseData?.pagination.page} of{" "}
+                {responseData?.pagination.totalPages}
               </span>
               <span className="text-sm font-medium text-slate-500">
-                Total Responses: <span className="text-slate-900 font-bold">{responseData?.pagination.total}</span>
+                Total Responses:{" "}
+                <span className="text-slate-900 font-bold">
+                  {responseData?.pagination.total}
+                </span>
               </span>
             </div>
-            
+
             <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
                 className="flex items-center space-x-2 px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-sm font-bold text-slate-600"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Prev</span>
               </button>
-              
+
               <div className="flex items-center space-x-1">
-                {[...Array(Math.min(5, responseData?.pagination.totalPages || 0))].map((_, i) => {
+                {[
+                  ...Array(
+                    Math.min(5, responseData?.pagination.totalPages || 0),
+                  ),
+                ].map((_, i) => {
                   const pageNum = i + 1;
                   // Simple pagination logic for now (showing first 5 pages)
                   return (
@@ -218,9 +303,9 @@ export function ResponsesTable({
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
                       className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
-                        currentPage === pageNum 
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                          : 'hover:bg-slate-50 text-slate-600'
+                        currentPage === pageNum
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                          : "hover:bg-slate-50 text-slate-600"
                       }`}
                     >
                       {pageNum}
@@ -229,8 +314,15 @@ export function ResponsesTable({
                 })}
               </div>
 
-              <button 
-                onClick={() => setCurrentPage(prev => Math.min(responseData?.pagination.totalPages || 1, prev + 1))}
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) =>
+                    Math.min(
+                      responseData?.pagination.totalPages || 1,
+                      prev + 1,
+                    ),
+                  )
+                }
                 disabled={currentPage === responseData?.pagination.totalPages}
                 className="flex items-center space-x-2 px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-sm font-bold text-slate-600"
               >
@@ -245,8 +337,12 @@ export function ResponsesTable({
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <FileText className="w-7 h-7 text-slate-400" />
           </div>
-          <h3 className="text-xl font-black text-slate-900 mb-2">No Responses Yet</h3>
-          <p className="text-slate-500 font-medium">Responses will appear here once your form is submitted.</p>
+          <h3 className="text-xl font-black text-slate-900 mb-2">
+            No Responses Yet
+          </h3>
+          <p className="text-slate-500 font-medium">
+            Responses will appear here once your form is submitted.
+          </p>
         </div>
       )}
     </div>

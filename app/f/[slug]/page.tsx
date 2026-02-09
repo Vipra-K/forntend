@@ -361,7 +361,7 @@ export default function PublicForm({
           <p className="text-slate-500 mb-10 font-medium leading-relaxed">
             {submissionSettings?.successMessage ||
               form?.settings?.successMessage ||
-              "Thank you for your valuable input. Your data has been securely synced to our servers."}
+              "Thank you for your response."}
           </p>
 
           {!submissionSettings?.redirectUrl ? (

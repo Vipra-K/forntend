@@ -109,6 +109,16 @@ export default function ResponsesPage({
     }
   };
 
+  const deleteResponse = async (responseId: string) => {
+    try {
+      await api.delete(`/forms/${id}/responses/${responseId}`);
+      toast.success("Response deleted");
+      fetchResponses();
+    } catch (err) {
+      toast.error("Failed to delete response");
+    }
+  };
+
   const exportJSON = async () => {
     try {
       const res = await api.get(`/forms/${id}/responses/export/json`);
@@ -337,6 +347,7 @@ export default function ResponsesPage({
           setEndDate={setEndDate}
           onExportCSV={exportCSV}
           onExportJSON={exportJSON}
+          onDeleteResponse={deleteResponse}
         />
       </div>
     </div>

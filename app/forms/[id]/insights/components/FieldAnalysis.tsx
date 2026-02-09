@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
 import {
   PieChart,
   Pie,
@@ -13,8 +13,8 @@ import {
   XAxis,
   YAxis,
   Legend,
-} from 'recharts';
-import { TrendingUp, CheckCircle2 } from 'lucide-react';
+} from "recharts";
+import { TrendingUp, CheckCircle2 } from "lucide-react";
 
 interface FieldStat {
   fieldId: string;
@@ -31,20 +31,20 @@ interface FieldAnalysisProps {
 }
 
 const COLORS = [
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-  '#84cc16',
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#84cc16",
 ];
 
 export function FieldAnalysis({ fields }: FieldAnalysisProps) {
   // Include rating fields as analyzable
   const analyzableFields = fields.filter((field) =>
-    ['select', 'multiselect', 'boolean', 'rating'].includes(field.type),
+    ["select", "multiselect", "boolean", "rating"].includes(field.type),
   );
 
   if (!analyzableFields.length) {
@@ -85,20 +85,14 @@ export function FieldAnalysis({ fields }: FieldAnalysisProps) {
   );
 }
 
-function FieldCard({
-  field,
-  index,
-}: {
-  field: FieldStat;
-  index: number;
-}) {
+function FieldCard({ field, index }: { field: FieldStat; index: number }) {
   const hasDistribution =
     field.valueDistribution && field.valueDistribution.length > 0;
 
-  const isCategorical = ['select', 'multiselect', 'boolean'].includes(
+  const isCategorical = ["select", "multiselect", "boolean"].includes(
     field.type,
   );
-  const isRating = field.type === 'rating';
+  const isRating = field.type === "rating";
 
   return (
     <motion.div
@@ -148,10 +142,7 @@ function FieldCard({
                   nameKey="name"
                 >
                   {field.valueDistribution.map((_, idx) => (
-                    <Cell
-                      key={idx}
-                      fill={COLORS[idx % COLORS.length]}
-                    />
+                    <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -171,10 +162,7 @@ function FieldCard({
                 <Tooltip />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {field.valueDistribution.map((_, idx) => (
-                    <Cell
-                      key={idx}
-                      fill={COLORS[idx % COLORS.length]}
-                    />
+                    <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                   ))}
                 </Bar>
               </BarChart>
@@ -187,9 +175,7 @@ function FieldCard({
           <p className="text-sm font-bold text-slate-400">
             Text-based responses
           </p>
-          <p className="text-xs text-slate-400 mt-1">
-            View in Responses tab
-          </p>
+          <p className="text-xs text-slate-400 mt-1">View in Responses tab</p>
         </div>
       )}
 
@@ -206,12 +192,12 @@ function FieldCard({
 
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-slate-600">
-            {field.totalResponses}{' '}
-            {field.totalResponses === 1 ? 'response' : 'responses'}
+            {field.totalResponses}{" "}
+            {field.totalResponses === 1 ? "response" : "responses"}
           </span>
           <span className="font-medium text-slate-500">
-            {field.uniqueValues} unique{' '}
-            {field.uniqueValues === 1 ? 'value' : 'values'}
+            {field.uniqueValues} unique{" "}
+            {field.uniqueValues === 1 ? "value" : "values"}
           </span>
         </div>
       </div>
