@@ -77,6 +77,25 @@ export default function ActivityLogsPage() {
 
   const logs = data?.logs ?? [];
 
+  const getEventLabel = (type: string) => {
+    switch (type) {
+      case "WEBHOOK_SENT":
+        return "Delivery succeeded";
+      case "WEBHOOK_FAILED":
+        return "Delivery failed";
+      case "WEBHOOK_RETRY":
+        return "Retry scheduled";
+      default:
+        return type.replace(/_/g, " ").toLowerCase();
+    }
+  };
+
+  const getStatusLabel = (status: string) =>
+    status
+      .toLowerCase()
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (m) => m.toUpperCase());
+
   return (
     <div className="flex flex-col h-full space-y-6 p-8">
       <div className="flex items-center justify-between">
@@ -88,10 +107,10 @@ export default function ActivityLogsPage() {
             </span>
           </div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-            Activity Logs
+            Activity
           </h1>
           <p className="text-sm text-slate-500">
-            Monitor webhook deliveries, retries, and lead creation events.
+            Track form response activity and delivery outcomes.
           </p>
         </div>
       </div>
@@ -136,8 +155,7 @@ export default function ActivityLogsPage() {
                 No Activity Logs Yet
               </p>
               <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                Once your forms start receiving responses and webhooks are
-                triggered, you&apos;ll see detailed delivery logs here.
+                Once your forms receive responses, you&apos;ll see activity here.
               </p>
             </div>
           )}
@@ -147,18 +165,11 @@ export default function ActivityLogsPage() {
               <thead className="bg-slate-50/80 border-b border-slate-100 text-xs uppercase tracking-[0.18em] text-slate-400">
                 <tr>
                   <th className="px-4 py-2 text-left font-semibold">Time</th>
-                  <th className="px-4 py-2 text-left font-semibold">Type</th>
+                  <th className="px-4 py-2 text-left font-semibold">Event</th>
                   <th className="px-4 py-2 text-left font-semibold">Status</th>
                   <th className="px-4 py-2 text-left font-semibold">Form</th>
                   <th className="px-4 py-2 text-left font-semibold">
-                    Endpoint
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold">HTTP</th>
-                  <th className="px-4 py-2 text-left font-semibold">
                     Attempts
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold">
-                    Duration
                   </th>
                   <th className="px-4 py-2 text-left font-semibold">Error</th>
                 </tr>
@@ -171,7 +182,7 @@ export default function ActivityLogsPage() {
                     </td>
                     <td className="px-4 py-2 align-top">
                       <div className="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 border border-slate-200/70">
-                        {log.type}
+                        {getEventLabel(log.type)}
                       </div>
                     </td>
                     <td className="px-4 py-2 align-top">
@@ -184,23 +195,14 @@ export default function ActivityLogsPage() {
                               : "bg-amber-50 text-amber-700 border-amber-100"
                         }`}
                       >
-                        {log.status}
+                        {getStatusLabel(log.status)}
                       </span>
                     </td>
                     <td className="px-4 py-2 align-top text-xs text-slate-600">
-                      {log.form?.title ?? log.formId}
-                    </td>
-                    <td className="px-4 py-2 align-top text-xs text-slate-500 max-w-xs truncate">
-                      {log.webhookUrl ?? "—"}
-                    </td>
-                    <td className="px-4 py-2 align-top text-xs text-slate-600">
-                      {log.httpStatus ?? "—"}
+                      {log.form?.title ?? "Untitled Form"}
                     </td>
                     <td className="px-4 py-2 align-top text-xs text-slate-600">
                       {log.attemptNumber}
-                    </td>
-                    <td className="px-4 py-2 align-top text-xs text-slate-600">
-                      {log.duration != null ? `${log.duration} ms` : "—"}
                     </td>
                     <td className="px-4 py-2 align-top text-xs text-red-500 max-w-sm">
                       {log.error && (

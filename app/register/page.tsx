@@ -7,12 +7,13 @@ import { Loader2, ArrowRight, FileText, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,11 +21,11 @@ export default function LoginPage() {
     setError("");
     setIsSubmitting(true);
     try {
-      await login(email, password);
-      toast.success("Welcome back!");
+      await register(name, email, password);
+      toast.success("Account created successfully");
       router.replace("/dashboard");
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Authentication failed";
+      const msg = err.response?.data?.message || "Registration failed";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -46,10 +47,10 @@ export default function LoginPage() {
               <FileText className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">
-              Sign In to Your Account
+              Create Your Account
             </h1>
             <p className="text-sm text-slate-500">
-              Welcome back. Please enter your details.
+              Enter your information below to get started.
             </p>
           </div>
 
@@ -67,6 +68,20 @@ export default function LoginPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 ml-1">
+                Full Name
+              </label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full bg-white border border-slate-200 rounded-lg py-2.5 px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all shadow-sm"
+              />
+            </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 ml-1">
@@ -97,16 +112,6 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => router.push("/forgot-password")}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                Forgot Password?
-              </button>
-            </div>
-
             <button
               type="submit"
               disabled={isSubmitting}
@@ -116,7 +121,7 @@ export default function LoginPage() {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>Create Account</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
@@ -125,10 +130,10 @@ export default function LoginPage() {
 
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <button
-              onClick={() => router.push("/register")}
+              onClick={() => router.push("/login")}
               className="text-slate-500 hover:text-blue-600 transition-colors text-xs font-medium"
             >
-              Don't have an account? Sign up
+              Already have an account? Sign in
             </button>
           </div>
         </div>

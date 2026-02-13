@@ -97,14 +97,14 @@ export default function LeadsPage() {
           <div className="flex items-center space-x-2 text-blue-600 mb-3">
             <div className="w-1 h-1 rounded-full bg-blue-600 animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-[0.25em]">
-              Form responses as leads
+              Leads
             </span>
           </div>
           <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
             Leads
           </h1>
           <p className="text-slate-500 font-medium text-base">
-            Form submissions captured here for CRM integration testing.
+            These leads belong to the Form Builder.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -147,8 +147,7 @@ export default function LeadsPage() {
             No Leads Yet
           </h3>
           <p className="text-slate-500 font-medium text-center max-w-sm">
-            Submit a form response (from a published form) and it will appear
-            here as a lead. Useful for testing before connecting your CRM.
+            New submissions will appear here as leads.
           </p>
         </div>
       ) : (
@@ -184,18 +183,6 @@ export default function LeadsPage() {
                         })}
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-2 text-[11px] font-mono text-slate-400">
-                      <span title={lead.formId}>
-                        Form:{" "}
-                        <span className="text-slate-500">{lead.formId}</span>
-                      </span>
-                      <span title={lead.responseId}>
-                        Response:{" "}
-                        <span className="text-slate-500">
-                          {lead.responseId}
-                        </span>
-                      </span>
-                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -223,32 +210,8 @@ export default function LeadsPage() {
                     className="border-t border-slate-100 bg-slate-50/50"
                   >
                     <div className="p-6 pt-4">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">
-                        Webhook Identifiers
-                      </p>
-                      <div className="grid gap-1.5 mb-4 text-xs font-mono text-slate-600">
-                        <div>
-                          <span className="text-slate-400">Form ID:</span>{" "}
-                          <span className="break-all">{lead.formId}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400">Response ID:</span>{" "}
-                          <span className="break-all">{lead.responseId}</span>
-                        </div>
-                        {typeof lead.payload === "object" &&
-                          lead.payload?.formVersionId && (
-                            <div>
-                              <span className="text-slate-400">
-                                Form version ID:
-                              </span>{" "}
-                              <span className="break-all">
-                                {String(lead.payload.formVersionId)}
-                              </span>
-                            </div>
-                          )}
-                      </div>
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3">
-                        Response Data
+                        Submission Fields
                       </p>
                       <div className="space-y-2">
                         {(() => {

@@ -2,31 +2,25 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "../../context/AuthContext";
 import { Loader2, ArrowRight, FileText, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useAuth } from "../../../context/AuthContext";
 
-export default function LoginPage() {
+export default function EziyoLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
-  const router = useRouter();
+  const { eziyoLogin } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsSubmitting(true);
     try {
-      await login(email, password);
-      toast.success("Welcome back!");
-      router.replace("/dashboard");
+      await eziyoLogin(email, password);
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Authentication failed";
+      const msg = err?.response?.data?.message || "Login failed";
       setError(msg);
-      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -46,10 +40,10 @@ export default function LoginPage() {
               <FileText className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">
-              Sign In to Your Account
+              Eziyo Sign In
             </h1>
             <p className="text-sm text-slate-500">
-              Welcome back. Please enter your details.
+              Enter your email and password to continue.
             </p>
           </div>
 
@@ -97,16 +91,6 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => router.push("/forgot-password")}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-              >
-                Forgot Password?
-              </button>
-            </div>
-
             <button
               type="submit"
               disabled={isSubmitting}
@@ -122,15 +106,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-            <button
-              onClick={() => router.push("/register")}
-              className="text-slate-500 hover:text-blue-600 transition-colors text-xs font-medium"
-            >
-              Don't have an account? Sign up
-            </button>
-          </div>
         </div>
 
         <p className="mt-8 text-center text-slate-400 text-[10px] font-medium tracking-wide">
