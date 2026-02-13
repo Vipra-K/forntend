@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import api from "../../../../lib/api";
 import { Settings2, Loader2 } from "lucide-react";
@@ -29,6 +29,7 @@ export default function FormEditor({
   const [activeSidebarTab, setActiveSidebarTab] = useState<
     "elements" | "theme" | "settings"
   >("elements");
+  const isCreatingDraftRef = useRef(false);
 
   useEffect(() => {
     fetchData();
@@ -73,6 +74,8 @@ export default function FormEditor({
           setForm(formData);
         }
       } else if (activeVer) {
+        if (isCreatingDraftRef.current) return;
+        isCreatingDraftRef.current = true;
         try {
           const newVersionRes = await api.post(`/forms/${id}/versions`);
           setActiveVersionId(newVersionRes.data.versionId);
@@ -88,6 +91,8 @@ export default function FormEditor({
           console.error("Failed to auto-create draft", err);
           setActiveVersionId(activeVer.id);
           setForm(formData);
+        } finally {
+          isCreatingDraftRef.current = false;
         }
       } else {
         setForm(formData);

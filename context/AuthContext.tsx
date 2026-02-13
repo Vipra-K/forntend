@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearEziyoSession();
     // Only redirect if we're NOT inside an iframe
     if (window.self === window.top) {
-      router.push("/login");
+      router.push("/eziyo/login");
     }
   }, [clearSession, clearEziyoSession, router]);
 

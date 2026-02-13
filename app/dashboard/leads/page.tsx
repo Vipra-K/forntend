@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import eziyoApi from "../../../lib/eziyoApi";
 import api from "../../../lib/api";
 import {
   Users,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Calendar,
   ChevronDown,
@@ -22,66 +21,84 @@ interface LeadPayloadValue {
 }
 
 interface Lead {
-  id: string;
-  formId: string;
-  formTitle: string;
-  formSlug: string;
-  responseId: string;
-  payload: {
-    event: string;
-    formId: string;
-    formVersionId?: string;
-    responseId: string;
-    submittedAt: string;
-    values?: LeadPayloadValue[];
-    fields?: Record<string, unknown>;
-  };
-  submittedAt: string;
-  createdAt: string;
+  lead_id: number;
+  form_id: string;
+  identifier: string | null;
+  created_at: string;
+  submitted_at: string;
+  lead_data: Record<string, unknown>;
 }
 
 // Helper to normalize payload data to values array format
-function getPayloadValues(payload: Lead["payload"]): LeadPayloadValue[] {
-  if (payload?.values && Array.isArray(payload.values)) {
-    return payload.values;
-  }
-  if (payload?.fields && typeof payload.fields === "object") {
-    return Object.entries(payload.fields).map(([fieldName, value]) => ({
-      key: fieldName,
-      fieldName,
-      value,
-    }));
-  }
-  return [];
+function getPayloadValues(data: Lead["lead_data"]): LeadPayloadValue[] {
+  if (!data || typeof data !== "object") return [];
+  return Object.entries(data).map(([fieldName, value]) => ({
+    key: fieldName,
+    fieldName,
+    value,
+  }));
 }
 
 interface LeadsResponse {
-  leads: Lead[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  success: boolean;
+  message: string;
+  count: number;
+  currentPage: number;
+  nextPage: number | null;
+  prevPage: number | null;
+  lastPage: number;
+  data: Lead[];
 }
 
 export default function LeadsPage() {
   const [data, setData] = useState<LeadsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [formTitles, setFormTitles] = useState<Record<string, string>>({});
+  const formTitleCacheRef = useRef<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     fetchLeads();
-  }, [page, sortOrder]);
+  }, [page, pageSize]);
 
   const fetchLeads = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get<LeadsResponse>("/leads", {
-        params: { page, limit: 15, sortOrder },
+      const token = localStorage.getItem("eziyoAccessToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      const res = await eziyoApi.get<LeadsResponse>("/api/v1/leads", {
+        params: { page, limit: pageSize },
+        headers,
       });
+
+      const uniqueFormIds = Array.from(
+        new Set(res.data.data.map((lead) => lead.form_id).filter(Boolean)),
+      );
+      const missingFormIds = uniqueFormIds.filter(
+        (formId) => !formTitleCacheRef.current[formId],
+      );
+
+      if (missingFormIds.length > 0) {
+        const formEntries = await Promise.all(
+          missingFormIds.map(async (formId) => {
+            try {
+              const res = await api.get(`/forms/${formId}`);
+              return [formId, res.data?.title || "Untitled Form"] as const;
+            } catch {
+              return [formId, "Untitled Form"] as const;
+            }
+          }),
+        );
+
+        formTitleCacheRef.current = {
+          ...formTitleCacheRef.current,
+          ...Object.fromEntries(formEntries),
+        };
+      }
+
+      setFormTitles({ ...formTitleCacheRef.current });
       setData(res.data);
     } catch (err) {
       toast.error("Failed to load leads");
@@ -108,16 +125,49 @@ export default function LeadsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
-            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
-          </select>
+          <div className="relative">
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPage(1);
+                setPageSize(Number(e.target.value));
+              }}
+              className="appearance-none px-4 py-2.5 pr-10 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={2}>2 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={20}>20 per page</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          </div>
         </div>
       </header>
+
+      {data && data.lastPage > 1 && (
+        <div className="flex flex-col gap-3 pb-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-slate-500">
+            Page {data.currentPage} of {data.lastPage} · {data.count} total
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={data.prevPage === null}
+              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronDown className="w-5 h-5 rotate-90" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(data.lastPage, p + 1))}
+              disabled={data.nextPage === null}
+              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronDown className="w-5 h-5 -rotate-90" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-4">
@@ -138,7 +188,7 @@ export default function LeadsPage() {
             </div>
           ))}
         </div>
-      ) : !data?.leads?.length ? (
+      ) : !data?.data?.length ? (
         <div className="flex flex-col items-center justify-center py-24 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-3xl border border-slate-100">
           <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200/50 mb-6">
             <Users className="w-9 h-9 text-slate-300" />
@@ -152,9 +202,9 @@ export default function LeadsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {data.leads.map((lead) => (
+          {data.data.map((lead) => (
             <motion.div
-              key={lead.id}
+              key={lead.lead_id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-slate-100 rounded-2xl overflow-hidden hover:shadow-lg hover:shadow-slate-200/50 transition-all"
@@ -162,7 +212,11 @@ export default function LeadsPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setExpandedId(expandedId === lead.id ? null : lead.id)
+                  setExpandedId(
+                    expandedId === String(lead.lead_id)
+                      ? null
+                      : String(lead.lead_id),
+                  )
                 }
                 className="w-full flex items-center justify-between gap-4 p-6 text-left"
               >
@@ -172,12 +226,12 @@ export default function LeadsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-slate-900 truncate">
-                      {lead.formTitle || "Untitled Form"}
+                      {formTitles[lead.form_id] || "Untitled Form"}
                     </p>
                     <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                       <Calendar className="w-3.5 h-3.5 shrink-0" />
                       <span>
-                        {new Date(lead.submittedAt).toLocaleString("en-US", {
+                        {new Date(lead.submitted_at).toLocaleString("en-US", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         })}
@@ -186,14 +240,13 @@ export default function LeadsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {typeof lead.payload === "object" &&
-                    getPayloadValues(lead.payload).length > 0 && (
-                      <span className="text-xs font-semibold text-slate-400">
-                        {getPayloadValues(lead.payload).length} field
-                        {getPayloadValues(lead.payload).length !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                  {expandedId === lead.id ? (
+                  {getPayloadValues(lead.lead_data).length > 0 && (
+                    <span className="text-xs font-semibold text-slate-400">
+                      {getPayloadValues(lead.lead_data).length} field
+                      {getPayloadValues(lead.lead_data).length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {expandedId === String(lead.lead_id) ? (
                     <ChevronUp className="w-5 h-5 text-slate-400" />
                   ) : (
                     <ChevronDown className="w-5 h-5 text-slate-400" />
@@ -201,7 +254,7 @@ export default function LeadsPage() {
                 </div>
               </button>
               <AnimatePresence>
-                {expandedId === lead.id && (
+                {expandedId === String(lead.lead_id) && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
@@ -215,7 +268,7 @@ export default function LeadsPage() {
                       </p>
                       <div className="space-y-2">
                         {(() => {
-                          const values = getPayloadValues(lead.payload);
+                          const values = getPayloadValues(lead.lead_data);
                           if (values.length === 0) {
                             return (
                               <p className="text-slate-400 text-sm">
@@ -253,34 +306,32 @@ export default function LeadsPage() {
             </motion.div>
           ))}
 
-          {data.pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between pt-6">
-              <p className="text-sm font-semibold text-slate-500">
-                Page {data.pagination.page} of {data.pagination.totalPages} ·{" "}
-                {data.pagination.total} total
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPage((p) => Math.min(data.pagination.totalPages, p + 1))
-                  }
-                  disabled={page >= data.pagination.totalPages}
-                  className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          )}
+        </div>
+      )}
+
+      {data && data.lastPage > 1 && (
+        <div className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-semibold text-slate-500">
+            Page {data.currentPage} of {data.lastPage} · {data.count} total
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={data.prevPage === null}
+              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronDown className="w-5 h-5 rotate-90" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(data.lastPage, p + 1))}
+              disabled={data.nextPage === null}
+              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronDown className="w-5 h-5 -rotate-90" />
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -62,7 +62,10 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const showSecurityTab = !user?.provider || user.provider === "LOCAL";
+  const isEziyoUser =
+    user?.provider === "EZIYO" ||
+    Boolean(localStorage.getItem("eziyoAccessToken"));
+  const showSecurityTab = !isEziyoUser;
 
   useEffect(() => {
     if (!showSecurityTab && activeTab === "security") {
@@ -103,6 +106,7 @@ export default function SettingsPage() {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isEziyoUser) return;
     setIsSaving(true);
     try {
       const payload: Record<string, string> = {};
@@ -216,7 +220,9 @@ export default function SettingsPage() {
                       Profile Information
                     </h3>
                     <p className="text-sm text-slate-500">
-                      Update your name and email address.
+                      {isEziyoUser
+                        ? "Your profile details are managed in Eziyo."
+                        : "Update your name and email address."}
                     </p>
                   </div>
 
@@ -233,7 +239,9 @@ export default function SettingsPage() {
                           setProfile({ ...profile, name: e.target.value })
                         }
                         placeholder="Enter your full name"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+                        readOnly={isEziyoUser}
+                        disabled={isEziyoUser}
+                        className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all ${isEziyoUser ? "opacity-70 cursor-not-allowed" : ""}`}
                       />
                     </div>
                   </div>
@@ -251,7 +259,9 @@ export default function SettingsPage() {
                         onChange={(e) =>
                           setProfile({ ...profile, email: e.target.value })
                         }
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+                        readOnly={isEziyoUser}
+                        disabled={isEziyoUser}
+                        className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all ${isEziyoUser ? "opacity-70 cursor-not-allowed" : ""}`}
                       />
                     </div>
                   </div>
@@ -259,7 +269,7 @@ export default function SettingsPage() {
                   <div className="pt-6 flex justify-end">
                     <button
                       type="submit"
-                      disabled={isSaving || !profileHasChanges}
+                      disabled={isSaving || !profileHasChanges || isEziyoUser}
                       className="bg-blue-600 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center space-x-2"
                     >
                       {isSaving ? (
